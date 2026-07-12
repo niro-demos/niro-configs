@@ -59,9 +59,12 @@ class PrepWorkflowTests(unittest.TestCase):
                 self.assertLess(token_at, propose_at)
                 self.assertLess(propose_at, upload_at)
 
-                run_step = block[run_at:token_at]
-                self.assertNotIn("NIRO_CONFIGS_APP_ID", run_step)
-                self.assertNotIn("NIRO_CONFIGS_APP_PRIVATE_KEY", run_step)
+                self.assertNotIn("NIRO_CONFIGS_APP_ID", block)
+                self.assertNotIn("NIRO_CONFIGS_APP_PRIVATE_KEY", block)
+
+                token_step = block[token_at:propose_at]
+                self.assertIn("app-id: ${{ secrets.NIRO_APP_CLIENT_ID }}", token_step)
+                self.assertIn("private-key: ${{ secrets.NIRO_APP_PRIVATE_KEY }}", token_step)
 
                 proposal = block[propose_at:upload_at]
                 self.assertIn("catalog-token: ${{ steps.niro-configs-token.outputs.token }}", proposal)
