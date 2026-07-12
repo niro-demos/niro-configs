@@ -36,6 +36,10 @@ configs/<repository>/<niro-dir>
     -> <install-root>/<niro-dir>
 ```
 
+A repository may keep multiple independent named configurations, such as
+`niro-local`, `niro-staging`, and `niro-prod`. Installing or proposing one name
+does not modify any sibling configuration.
+
 An approved entry replaces the destination in the temporary CI workspace. If
 the repository has no catalog entry, installation is a no-op and Niro performs
 its normal first-run initialization. A known repository with the wrong
@@ -132,7 +136,8 @@ action or catalog changes, update that pin before refreshing project workflows.
 
 ```text
 configs/<owner>/<repo>/
-  metadata.yaml
+  metadata/
+    <niro-dir>.yaml
   <niro-dir>/
 .github/actions/install/
 .github/workflows/ci.yml

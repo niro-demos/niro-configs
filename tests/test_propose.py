@@ -36,8 +36,8 @@ class ProposeTests(unittest.TestCase):
     def test_branch_name_is_stable_and_contains_no_untrusted_path(self) -> None:
         proposer = load_proposer()
         self.assertEqual(
-            proposer.proposal_branch("niro-demos/Sieve", "29209296603"),
-            "automation/sieve-run-29209296603",
+            proposer.proposal_branch("niro-demos/Sieve", "niro-staging", "29209296603"),
+            "automation/sieve-niro-staging-run-29209296603",
         )
 
     def test_resolve_provenance_finds_first_commit_owned_by_upstream(self) -> None:

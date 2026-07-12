@@ -24,11 +24,15 @@ class ProposalError(RuntimeError):
     pass
 
 
-def proposal_branch(repository: str, run_id: str) -> str:
-    if not REPOSITORY_RE.fullmatch(repository) or not run_id.isdigit():
-        raise ProposalError("invalid repository or run ID")
+def proposal_branch(repository: str, niro_dir: str, run_id: str) -> str:
+    if (
+        not REPOSITORY_RE.fullmatch(repository)
+        or not re.fullmatch(r"[A-Za-z0-9_.-]+", niro_dir)
+        or not run_id.isdigit()
+    ):
+        raise ProposalError("invalid repository, Niro directory, or run ID")
     name = repository.split("/", 1)[1].lower()
-    return f"automation/{name}-run-{run_id}"
+    return f"automation/{name}-{niro_dir.lower()}-run-{run_id}"
 
 
 def resolve_provenance(
@@ -145,7 +149,7 @@ def main() -> int:
     if not run_match or not source_run.startswith(expected_run_prefix):
         raise ProposalError("source-run must belong to the source repository")
     run_id = run_match.group(1)
-    branch = proposal_branch(repository, run_id)
+    branch = proposal_branch(repository, niro_dir, run_id)
 
     source_info = gh_json(source_token, f"repos/{repository}")
     commit_cache: dict[str, dict] = {}
@@ -206,7 +210,8 @@ def main() -> int:
             env=catalog_environment,
         )
         target = checkout / "configs" / repository
-        before = tree_digest(target / niro_dir)
+        named_target = target / niro_dir
+        before = tree_digest(named_target)
         import_arguments = [
             "python3",
             "scripts/catalog.py",
@@ -228,10 +233,10 @@ def main() -> int:
             "--source-run-conclusion",
             "success",
         ]
-        if target.exists():
+        if named_target.exists():
             import_arguments.append("--replace")
         command(import_arguments, cwd=checkout)
-        after = tree_digest(target / niro_dir)
+        after = tree_digest(named_target)
         if before == after:
             print(f"No reusable Niro config changes for {repository}; no PR opened")
             return 0
@@ -272,6 +277,7 @@ def main() -> int:
                     "## Automated Niro configuration proposal",
                     "",
                     f"- Source repository: `{repository}`",
+                    f"- Niro directory: `{niro_dir}`",
                     f"- Source run: {source_run}",
                     f"- Tested source SHA: `{source_sha}`",
                     f"- Upstream provenance: `{upstream}@{upstream_sha}`",
@@ -284,7 +290,7 @@ def main() -> int:
             ),
             encoding="utf-8",
         )
-        title = f"Update {repository} Niro configuration"
+        title = f"Update {repository} `{niro_dir}` configuration"
         pull_request = command(
             [
                 "gh", "pr", "create", "--draft",
