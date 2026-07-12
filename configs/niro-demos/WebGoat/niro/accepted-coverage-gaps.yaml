@@ -1,0 +1,6 @@
+# accepted-coverage-gaps.yaml — append-only register of surfaces that cannot be exercised here.
+accepted_coverage_gaps:
+  - gap: "Vertical role-escalation comparisons against an administrator account"
+    reason: "WebGoat's application authorization model creates only standard learner users and defines no administrator role or admin-only product surface, so an admin actor cannot be seeded from this checkout."
+  - gap: "GitHub OAuth login flow"
+    reason: "The local checkout has only dummy GitHub OAuth client credentials and no authorized external GitHub application; exercising the external identity-provider callback requires secrets and infrastructure unavailable in this CI runtime."

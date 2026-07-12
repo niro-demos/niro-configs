@@ -79,8 +79,13 @@ published; run Niro again and import the completed artifact instead.
 | Repository | Source run |
 | --- | --- |
 | `niro-demos/casdoor` | Successful Codex run |
+| `niro-demos/crAPI` | Configuration, pentest, and verification completed before Claude reached its session limit |
 | `niro-demos/dify` | Configuration completed before Claude reached its session limit |
+| `niro-demos/DVWA` | Successful Copilot run |
 | `niro-demos/gitea` | Successful Codex run |
+| `niro-demos/juice-shop` | Successful Claude run |
+| `niro-demos/VulnerableApp` | Successful Codex run |
+| `niro-demos/WebGoat` | Successful Codex run |
 
 Saleor is absent because its Claude run produced only partial setup. OpenObserve
 is absent because Copilot failed before Niro produced usable configuration.
