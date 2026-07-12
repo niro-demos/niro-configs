@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "prep-niro-demos-forks.sh"
+ACTION = ROOT / ".github" / "actions" / "install" / "action.yml"
 INSTALL_ACTION = (
     "niro-demos/niro-configs/.github/actions/install@"
     "5ca318bab318d108ab9725387bc7d7ddfb17c771"
@@ -35,6 +36,12 @@ class PrepWorkflowTests(unittest.TestCase):
                 block = self.template(name)
                 self.assertIn(expected, block)
                 self.assertLess(block.index(expected), block.index("- name: Install Niro"))
+                self.assertNotIn("repository: ${{ github.repository }}", block)
+
+    def test_action_auto_detects_repository_without_a_repository_input(self) -> None:
+        action = ACTION.read_text(encoding="utf-8")
+        self.assertNotRegex(action, r"(?m)^  repository:")
+        self.assertNotIn("inputs.repository", action)
 
     def test_action_is_pinned_to_an_immutable_commit(self) -> None:
         references = re.findall(

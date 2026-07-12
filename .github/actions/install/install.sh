@@ -4,7 +4,7 @@ set -euo pipefail
 action_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$action_dir/../../.." && pwd)"
 workspace="${GITHUB_WORKSPACE:-$PWD}"
-repository="${NIRO_CONFIG_REPOSITORY:?repository input is required}"
+repository="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 destination="${NIRO_CONFIG_DESTINATION:-niro}"
 replace="${NIRO_CONFIG_REPLACE:-false}"
 if_missing="${NIRO_CONFIG_IF_MISSING:-skip}"

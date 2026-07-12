@@ -109,7 +109,6 @@ jobs:
       - name: Install approved Niro configuration
         uses: niro-demos/niro-configs/.github/actions/install@5ca318bab318d108ab9725387bc7d7ddfb17c771
         with:
-          repository: ${{ github.repository }}
           replace: "true"
 
       - name: Install Niro
@@ -186,7 +185,6 @@ jobs:
       - name: Install approved Niro configuration
         uses: niro-demos/niro-configs/.github/actions/install@5ca318bab318d108ab9725387bc7d7ddfb17c771
         with:
-          repository: ${{ github.repository }}
           replace: "true"
 
       - name: Install Niro

@@ -105,7 +105,7 @@ class CatalogTests(unittest.TestCase):
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": str(workspace),
-                "NIRO_CONFIG_REPOSITORY": "niro-demos/gitea",
+                "GITHUB_REPOSITORY": "niro-demos/gitea",
                 "NIRO_CONFIG_DESTINATION": "niro",
                 "NIRO_CONFIG_REPLACE": "false",
             }
@@ -132,7 +132,7 @@ class CatalogTests(unittest.TestCase):
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
-                "NIRO_CONFIG_REPOSITORY": "niro-demos/gitea",
+                "GITHUB_REPOSITORY": "niro-demos/gitea",
                 "NIRO_CONFIG_DESTINATION": "../escape",
                 "NIRO_CONFIG_REPLACE": "false",
             }
@@ -149,7 +149,7 @@ class CatalogTests(unittest.TestCase):
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
-                "NIRO_CONFIG_REPOSITORY": "niro-demos/gitea",
+                "GITHUB_REPOSITORY": "niro-demos/gitea",
                 "NIRO_CONFIG_DESTINATION": ".",
                 "NIRO_CONFIG_REPLACE": "true",
             }
@@ -165,7 +165,7 @@ class CatalogTests(unittest.TestCase):
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
-                "NIRO_CONFIG_REPOSITORY": "niro-demos/not-saved-yet",
+                "GITHUB_REPOSITORY": "niro-demos/not-saved-yet",
                 "NIRO_CONFIG_DESTINATION": "niro",
                 "NIRO_CONFIG_REPLACE": "false",
                 "NIRO_CONFIG_IF_MISSING": "skip",
@@ -182,7 +182,7 @@ class CatalogTests(unittest.TestCase):
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
-                "NIRO_CONFIG_REPOSITORY": "niro-demos/saleor",
+                "GITHUB_REPOSITORY": "niro-demos/saleor",
                 "NIRO_CONFIG_DESTINATION": "niro",
                 "NIRO_CONFIG_REPLACE": "true",
                 "NIRO_CONFIG_IF_MISSING": "skip",

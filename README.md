@@ -50,11 +50,12 @@ Pin the action to an immutable commit:
 - name: Install approved Niro configuration
   uses: niro-demos/niro-configs/.github/actions/install@<commit-sha>
   with:
-    repository: ${{ github.repository }}
+    replace: "true"
 ```
 
-The action refuses to overwrite an existing `niro/` directory unless
-`replace: "true"` is explicitly supplied.
+The action selects `configs/$GITHUB_REPOSITORY/niro` automatically. It refuses
+to overwrite an existing `niro/` directory unless `replace: "true"` is
+explicitly supplied.
 
 ## Import a candidate
 
