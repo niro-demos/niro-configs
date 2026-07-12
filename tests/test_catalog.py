@@ -21,8 +21,10 @@ def metadata(repository: str = "niro-demos/example") -> str:
             "upstream: example/example",
             f"upstream_sha: {'a' * 40}",
             "niro_version: v1.2.3",
+            "installable: true",
             "validated_at: 2026-07-12",
             "source_run: https://github.com/niro-demos/example/actions/runs/1",
+            "source_run_conclusion: success",
             "",
         ]
     )
@@ -53,6 +55,27 @@ class CatalogTests(unittest.TestCase):
             self.make_config(root)
             result = self.run_catalog(root, "validate")
             self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_validate_accepts_explicit_non_installable_partial_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = self.make_config(root)
+            (config / "niro" / "scope.yaml").unlink()
+            metadata_path = config / "metadata.yaml"
+            metadata_path.write_text(
+                metadata_path.read_text(encoding="utf-8").replace(
+                    "installable: true", "installable: false"
+                ),
+                encoding="utf-8",
+            )
+            result = self.run_catalog(root, "validate")
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            status = self.run_catalog(
+                root, "installable", "--repository", "niro-demos/example"
+            )
+            self.assertEqual(status.returncode, 0, status.stderr)
+            self.assertEqual(status.stdout.strip(), "false")
 
     def test_validate_rejects_secret_runtime_and_symlink_content(self) -> None:
         cases = (
@@ -154,6 +177,23 @@ class CatalogTests(unittest.TestCase):
             self.assertIn("No approved Niro configuration", result.stdout)
             self.assertFalse((Path(temporary) / "niro").exists())
 
+    def test_installer_skips_saved_partial_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            environment = {
+                **os.environ,
+                "GITHUB_WORKSPACE": temporary,
+                "NIRO_CONFIG_REPOSITORY": "niro-demos/saleor",
+                "NIRO_CONFIG_DESTINATION": "niro",
+                "NIRO_CONFIG_REPLACE": "true",
+                "NIRO_CONFIG_IF_MISSING": "skip",
+            }
+            result = subprocess.run(
+                [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("partial and will not be installed", result.stdout)
+            self.assertFalse((Path(temporary) / "niro").exists())
+
     def test_import_keeps_config_and_harness_but_drops_findings(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -185,6 +225,8 @@ class CatalogTests(unittest.TestCase):
                 "v1.2.3",
                 "--source-run",
                 "https://github.com/niro-demos/example/actions/runs/1",
+                "--source-run-conclusion",
+                "success",
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             config = root / "configs" / "niro-demos" / "example" / "niro"
@@ -218,8 +260,47 @@ class CatalogTests(unittest.TestCase):
                     "v1.2.3",
                     "--source-run",
                     "https://github.com/niro-demos/example/actions/runs/1",
+                    "--source-run-conclusion",
+                    "failure",
                 )
                 self.assertNotEqual(result.returncode, 0)
+
+    def test_partial_import_preserves_incomplete_knowledge_without_approving_install(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive_path = root / "partial.tar"
+            with tarfile.open(archive_path, "w") as archive:
+                for name, content in (
+                    ("niro/niro.yaml", b"version: 1\n"),
+                    ("niro/accepted-behaviors.yaml", b"accepted_behaviors: []\n"),
+                ):
+                    info = tarfile.TarInfo(name)
+                    info.size = len(content)
+                    archive.addfile(info, io.BytesIO(content))
+
+            result = self.run_catalog(
+                root,
+                "import",
+                "--repository",
+                "niro-demos/example",
+                "--archive",
+                str(archive_path),
+                "--upstream",
+                "example/example",
+                "--upstream-sha",
+                "a" * 40,
+                "--niro-version",
+                "v1.2.3",
+                "--source-run",
+                "https://github.com/niro-demos/example/actions/runs/1",
+                "--source-run-conclusion",
+                "failure",
+                "--partial",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            config = root / "configs" / "niro-demos" / "example"
+            self.assertFalse((config / "niro" / "scope.yaml").exists())
+            self.assertIn("installable: false", (config / "metadata.yaml").read_text())
 
 
 if __name__ == "__main__":

@@ -30,6 +30,18 @@ findings, logs, runtime state, real credential/fixture files, archives, binary
 files, and symlinks. Example credential and fixture templates are allowed because
 they contain public demo seed data rather than live secrets.
 
+## Saved applications
+
+| Repository | State | Source run |
+| --- | --- | --- |
+| `niro-demos/casdoor` | Installable | Successful Codex run |
+| `niro-demos/dify` | Installable | Config completed before Claude session limit |
+| `niro-demos/gitea` | Installable | Successful Codex run |
+| `niro-demos/saleor` | Partial, not installed | Claude session limit interrupted setup |
+
+OpenObserve is intentionally absent because its Copilot run failed before Niro
+produced usable configuration.
+
 ## Install in a workflow
 
 Pin the action to an immutable commit:
@@ -53,10 +65,13 @@ python3 scripts/catalog.py import \
   --upstream go-gitea/gitea \
   --upstream-sha <tested-commit> \
   --niro-version <version> \
-  --source-run https://github.com/niro-demos/gitea/actions/runs/<run-id>
+  --source-run https://github.com/niro-demos/gitea/actions/runs/<run-id> \
+  --source-run-conclusion success
 ```
 
 Then inspect the diff, run `python3 scripts/catalog.py validate`, and open a PR.
+Use `--partial` only to preserve interrupted setup state; the installer validates
+it but deliberately skips it until a later run produces a complete config.
 
 ## Prepare demo repositories
 

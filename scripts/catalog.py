@@ -55,12 +55,14 @@ BANNED_SUFFIXES = {
     ".zip",
 }
 REQUIRED_METADATA = {
+    "installable",
     "repository",
     "upstream",
     "upstream_sha",
     "niro_version",
     "validated_at",
     "source_run",
+    "source_run_conclusion",
 }
 
 
@@ -107,7 +109,7 @@ def validate_file(path: Path, relative: PurePosixPath) -> None:
         raise CatalogError(f"binary file is not allowed: {relative}")
 
 
-def validate_repository(root: Path, repository: str) -> None:
+def validate_repository(root: Path, repository: str) -> dict[str, str]:
     repository = checked_repository(repository)
     config = root / "configs" / repository
     metadata_path = config / "metadata.yaml"
@@ -115,9 +117,6 @@ def validate_repository(root: Path, repository: str) -> None:
 
     if not metadata_path.is_file() or not niro.is_dir():
         raise CatalogError(f"no approved configuration for {repository}")
-    if not (niro / "niro.yaml").is_file() or not (niro / "scope.yaml").is_file():
-        raise CatalogError(f"{repository}: niro.yaml and scope.yaml are required")
-
     metadata = parse_metadata(metadata_path)
     if metadata["repository"] != repository:
         raise CatalogError(f"{metadata_path}: repository does not match its directory")
@@ -130,6 +129,19 @@ def validate_repository(root: Path, repository: str) -> None:
         raise CatalogError(f"{metadata_path}: validated_at must be YYYY-MM-DD") from error
     if not metadata["niro_version"] or not metadata["source_run"].startswith("https://github.com/"):
         raise CatalogError(f"{metadata_path}: niro_version and GitHub source_run are required")
+    if metadata["installable"] not in {"true", "false"}:
+        raise CatalogError(f"{metadata_path}: installable must be true or false")
+    if metadata["source_run_conclusion"] not in {
+        "success",
+        "failure",
+        "cancelled",
+        "timed_out",
+    }:
+        raise CatalogError(f"{metadata_path}: unsupported source_run_conclusion")
+    if not (niro / "niro.yaml").is_file():
+        raise CatalogError(f"{repository}: niro.yaml is required")
+    if metadata["installable"] == "true" and not (niro / "scope.yaml").is_file():
+        raise CatalogError(f"{repository}: installable config requires scope.yaml")
 
     for path in config.rglob("*"):
         if path.is_symlink():
@@ -140,6 +152,7 @@ def validate_repository(root: Path, repository: str) -> None:
             except ValueError as error:
                 raise CatalogError(f"unexpected file outside niro/: {path.name}") from error
             validate_file(path, relative)
+    return metadata
 
 
 def validate_catalog(root: Path, repository: str | None) -> None:
@@ -181,8 +194,10 @@ def write_metadata(path: Path, args: argparse.Namespace) -> None:
                 f"upstream: {args.upstream}",
                 f"upstream_sha: {args.upstream_sha}",
                 f"niro_version: {args.niro_version}",
+                f"installable: {'false' if args.partial else 'true'}",
                 f"validated_at: {dt.date.today().isoformat()}",
                 f"source_run: {args.source_run}",
+                f"source_run_conclusion: {args.source_run_conclusion}",
                 "",
             ]
         ),
@@ -246,7 +261,7 @@ def import_archive(root: Path, args: argparse.Namespace) -> None:
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument("command", choices=("validate", "import"))
+    result.add_argument("command", choices=("validate", "import", "installable"))
     result.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     result.add_argument("--repository")
     result.add_argument("--archive", type=Path)
@@ -254,6 +269,8 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--upstream-sha")
     result.add_argument("--niro-version")
     result.add_argument("--source-run")
+    result.add_argument("--source-run-conclusion")
+    result.add_argument("--partial", action="store_true")
     result.add_argument("--replace", action="store_true")
     return result
 
@@ -263,8 +280,21 @@ def main() -> int:
     try:
         if args.command == "validate":
             validate_catalog(args.root.resolve(), args.repository)
+        elif args.command == "installable":
+            if not args.repository:
+                raise CatalogError("installable requires: repository")
+            metadata = validate_repository(args.root.resolve(), args.repository)
+            print(metadata["installable"])
         else:
-            required = ("repository", "archive", "upstream", "upstream_sha", "niro_version", "source_run")
+            required = (
+                "repository",
+                "archive",
+                "upstream",
+                "upstream_sha",
+                "niro_version",
+                "source_run",
+                "source_run_conclusion",
+            )
             missing = [name.replace("_", "-") for name in required if not getattr(args, name)]
             if missing:
                 raise CatalogError(f"import requires: {', '.join(missing)}")

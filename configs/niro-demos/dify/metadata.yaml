@@ -1,0 +1,9 @@
+repository: niro-demos/dify
+upstream: langgenius/dify
+upstream_sha: 31b427de244e80fe171ec3986b20b73afb1fccff
+niro_version: 0.1.51
+installable: true
+validated_at: 2026-07-12
+source_run: https://github.com/niro-demos/dify/actions/runs/29184703922
+source_run_conclusion: failure
+source_run_note: Claude session limit after reusable configuration completed

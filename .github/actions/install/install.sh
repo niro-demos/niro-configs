@@ -54,9 +54,14 @@ if [ ! -d "$source_dir" ]; then
   exit 1
 fi
 
-python3 "$root/scripts/catalog.py" validate \
+installable="$(python3 "$root/scripts/catalog.py" installable \
   --root "$root" \
-  --repository "$repository"
+  --repository "$repository")"
+
+if [ "$installable" != "true" ]; then
+  echo "Saved Niro state for $repository is partial and will not be installed"
+  exit 0
+fi
 
 target="$workspace/$destination"
 

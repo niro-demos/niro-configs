@@ -2,5 +2,7 @@ repository: niro-demos/gitea
 upstream: go-gitea/gitea
 upstream_sha: dc9f1cf02d6f2d749c5883c7670589ebd4f1e98f
 niro_version: 0.1.51
+installable: true
 validated_at: 2026-07-12
 source_run: https://github.com/niro-demos/gitea/actions/runs/29184703693
+source_run_conclusion: success
