@@ -56,6 +56,7 @@ BANNED_SUFFIXES = {
 }
 REQUIRED_METADATA = {
     "installable",
+    "niro_dir",
     "repository",
     "upstream",
     "upstream_sha",
@@ -73,6 +74,12 @@ class CatalogError(RuntimeError):
 def checked_repository(value: str) -> str:
     if not REPOSITORY_RE.fullmatch(value):
         raise CatalogError(f"invalid repository name: {value!r}")
+    return value
+
+
+def checked_niro_dir(value: str) -> str:
+    if value in {".", ".."} or not re.fullmatch(r"[A-Za-z0-9_.-]+", value):
+        raise CatalogError(f"invalid Niro directory name: {value!r}")
     return value
 
 
@@ -113,11 +120,14 @@ def validate_repository(root: Path, repository: str) -> dict[str, str]:
     repository = checked_repository(repository)
     config = root / "configs" / repository
     metadata_path = config / "metadata.yaml"
-    niro = config / "niro"
 
-    if not metadata_path.is_file() or not niro.is_dir():
+    if not metadata_path.is_file():
         raise CatalogError(f"no approved configuration for {repository}")
     metadata = parse_metadata(metadata_path)
+    niro_dir = checked_niro_dir(metadata["niro_dir"])
+    niro = config / niro_dir
+    if not niro.is_dir():
+        raise CatalogError(f"{repository}: configured Niro directory does not exist: {niro_dir}")
     if metadata["repository"] != repository:
         raise CatalogError(f"{metadata_path}: repository does not match its directory")
     checked_repository(metadata["upstream"])
@@ -150,7 +160,7 @@ def validate_repository(root: Path, repository: str) -> dict[str, str]:
             try:
                 relative = PurePosixPath(path.relative_to(niro).as_posix())
             except ValueError as error:
-                raise CatalogError(f"unexpected file outside niro/: {path.name}") from error
+                raise CatalogError(f"unexpected file outside {niro_dir}/: {path.name}") from error
             validate_file(path, relative)
     return metadata
 
@@ -191,6 +201,7 @@ def write_metadata(path: Path, args: argparse.Namespace) -> None:
         "\n".join(
             [
                 f"repository: {args.repository}",
+                f"niro_dir: {args.niro_dir}",
                 f"upstream: {args.upstream}",
                 f"upstream_sha: {args.upstream_sha}",
                 f"niro_version: {args.niro_version}",
@@ -208,6 +219,7 @@ def write_metadata(path: Path, args: argparse.Namespace) -> None:
 def import_archive(root: Path, args: argparse.Namespace) -> None:
     checked_repository(args.repository)
     checked_repository(args.upstream)
+    checked_niro_dir(args.niro_dir)
     if not SHA_RE.fullmatch(args.upstream_sha):
         raise CatalogError("upstream-sha must be a 40-character lowercase SHA")
     if not args.source_run.startswith("https://github.com/"):
@@ -220,13 +232,13 @@ def import_archive(root: Path, args: argparse.Namespace) -> None:
     with tempfile.TemporaryDirectory(prefix="niro-config-import-") as temporary:
         temp_root = Path(temporary)
         staged = temp_root / "configs" / args.repository
-        niro = staged / "niro"
+        niro = staged / args.niro_dir
         niro.mkdir(parents=True)
 
         with tarfile.open(args.archive, mode="r:*") as archive:
             for member in archive.getmembers():
                 path = safe_member_path(member)
-                if not path.parts or path.parts[0] != "niro" or len(path.parts) == 1:
+                if not path.parts or path.parts[0] != args.niro_dir or len(path.parts) == 1:
                     continue
                 relative = PurePosixPath(*path.parts[1:])
                 if member.isdir():
@@ -264,6 +276,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("command", choices=("validate", "import", "installable"))
     result.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
     result.add_argument("--repository")
+    result.add_argument("--niro-dir")
     result.add_argument("--archive", type=Path)
     result.add_argument("--upstream")
     result.add_argument("--upstream-sha")
@@ -281,13 +294,19 @@ def main() -> int:
         if args.command == "validate":
             validate_catalog(args.root.resolve(), args.repository)
         elif args.command == "installable":
-            if not args.repository:
-                raise CatalogError("installable requires: repository")
+            if not args.repository or not args.niro_dir:
+                raise CatalogError("installable requires: repository, niro-dir")
             metadata = validate_repository(args.root.resolve(), args.repository)
+            if metadata["niro_dir"] != args.niro_dir:
+                raise CatalogError(
+                    f"{args.repository}: requested {args.niro_dir!r}, "
+                    f"catalog contains {metadata['niro_dir']!r}"
+                )
             print(metadata["installable"])
         else:
             required = (
                 "repository",
+                "niro_dir",
                 "archive",
                 "upstream",
                 "upstream_sha",

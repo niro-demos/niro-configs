@@ -36,17 +36,17 @@ class PrepWorkflowTests(unittest.TestCase):
                 block = self.template(name)
                 self.assertIn(expected, block)
                 self.assertLess(block.index(expected), block.index("- name: Install Niro"))
-                self.assertNotIn("repository: ${{ github.repository }}", block)
                 install_step = block[block.index(expected) : block.index("- name: Install Niro")]
-                self.assertNotIn("with:", install_step)
+                self.assertIn("repository: ${{ github.repository }}", install_step)
+                self.assertIn("niro-dir: niro", install_step)
+                self.assertIn("install-root: ${{ github.workspace }}", install_step)
 
-    def test_action_auto_detects_repository_without_a_repository_input(self) -> None:
+    def test_action_requires_only_generic_location_inputs(self) -> None:
         action = ACTION.read_text(encoding="utf-8")
-        self.assertNotRegex(action, r"(?m)^  repository:")
-        self.assertNotIn("inputs.repository", action)
-        self.assertNotRegex(action, r"(?m)^  (replace|if-missing):")
-        self.assertNotIn("inputs.replace", action)
-        self.assertNotIn("inputs.if-missing", action)
+        for name in ("repository", "niro-dir", "install-root"):
+            self.assertRegex(action, rf"(?m)^  {name}:\n(?:    .*\n)*?    required: true$")
+        self.assertNotIn("default:", action)
+        self.assertNotRegex(action, r"(?m)^  (replace|if-missing|destination):")
 
     def test_action_is_pinned_to_an_immutable_commit(self) -> None:
         references = re.findall(

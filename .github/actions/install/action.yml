@@ -2,10 +2,15 @@ name: Install approved Niro configuration
 description: Copy a reviewed repository-specific Niro config into the workspace
 
 inputs:
-  destination:
-    description: Workspace-relative destination
-    required: false
-    default: niro
+  repository:
+    description: Catalog repository key in owner/name form
+    required: true
+  niro-dir:
+    description: Niro configuration directory name
+    required: true
+  install-root:
+    description: Absolute parent directory for the installed Niro directory
+    required: true
 
 runs:
   using: composite
@@ -13,5 +18,7 @@ runs:
     - name: Install configuration
       shell: bash
       env:
-        NIRO_CONFIG_DESTINATION: ${{ inputs.destination }}
+        NIRO_CONFIG_REPOSITORY: ${{ inputs.repository }}
+        NIRO_CONFIG_NIRO_DIR: ${{ inputs.niro-dir }}
+        NIRO_CONFIG_INSTALL_ROOT: ${{ inputs.install-root }}
       run: "$GITHUB_ACTION_PATH/install.sh"

@@ -20,7 +20,7 @@ The testing agent never receives credentials that can write to this repository.
 ```text
 configs/<owner>/<repo>/
   metadata.yaml
-  niro/
+  <niro-dir>/
 .github/actions/install/
 scripts/
 ```
@@ -49,17 +49,24 @@ Pin the action to an immutable commit:
 ```yaml
 - name: Install approved Niro configuration
   uses: niro-demos/niro-configs/.github/actions/install@<commit-sha>
+  with:
+    repository: niro-demos/gitea
+    niro-dir: niro
+    install-root: ${{ github.workspace }}
 ```
 
-The action selects `configs/$GITHUB_REPOSITORY/niro` automatically. An approved
-catalog entry replaces the workspace's existing `niro/`; a missing entry is a
-no-op so Niro can initialize normally.
+The action copies `configs/<repository>/<niro-dir>` to
+`<install-root>/<niro-dir>`. All three inputs are required. `install-root` must
+be an absolute existing directory inside `GITHUB_WORKSPACE`. An approved entry
+replaces the destination; a missing repository is a no-op so Niro can initialize
+normally.
 
 ## Import a candidate
 
 ```bash
 python3 scripts/catalog.py import \
   --repository niro-demos/gitea \
+  --niro-dir niro \
   --archive ./niro-knowledge.tar \
   --upstream go-gitea/gitea \
   --upstream-sha <tested-commit> \

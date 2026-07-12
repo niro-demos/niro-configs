@@ -1,4 +1,5 @@
 repository: niro-demos/dify
+niro_dir: niro
 upstream: langgenius/dify
 upstream_sha: 31b427de244e80fe171ec3986b20b73afb1fccff
 niro_version: 0.1.51

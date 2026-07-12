@@ -1,4 +1,5 @@
 repository: niro-demos/gitea
+niro_dir: niro
 upstream: go-gitea/gitea
 upstream_sha: dc9f1cf02d6f2d749c5883c7670589ebd4f1e98f
 niro_version: 0.1.51

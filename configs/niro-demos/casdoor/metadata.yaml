@@ -1,4 +1,5 @@
 repository: niro-demos/casdoor
+niro_dir: niro
 upstream: casdoor/casdoor
 upstream_sha: 2dcc45ebd32734fd54adb7f624b79162ac2757ae
 niro_version: 0.1.51

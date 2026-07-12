@@ -18,6 +18,7 @@ def metadata(repository: str = "niro-demos/example") -> str:
     return "\n".join(
         [
             f"repository: {repository}",
+            "niro_dir: niro",
             "upstream: example/example",
             f"upstream_sha: {'a' * 40}",
             "niro_version: v1.2.3",
@@ -80,7 +81,12 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
 
             status = self.run_catalog(
-                root, "installable", "--repository", "niro-demos/example"
+                root,
+                "installable",
+                "--repository",
+                "niro-demos/example",
+                "--niro-dir",
+                "niro",
             )
             self.assertEqual(status.returncode, 0, status.stderr)
             self.assertEqual(status.stdout.strip(), "false")
@@ -113,7 +119,9 @@ class CatalogTests(unittest.TestCase):
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": str(workspace),
-                "GITHUB_REPOSITORY": "niro-demos/gitea",
+                "NIRO_CONFIG_REPOSITORY": "niro-demos/gitea",
+                "NIRO_CONFIG_NIRO_DIR": "niro",
+                "NIRO_CONFIG_INSTALL_ROOT": str(workspace),
             }
             first = subprocess.run(
                 [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
@@ -130,45 +138,43 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(second.returncode, 0, second.stderr)
             self.assertFalse(stale.exists())
 
-    def test_installer_rejects_destination_traversal(self) -> None:
+    def test_installer_rejects_niro_directory_traversal(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
-                "GITHUB_REPOSITORY": "niro-demos/gitea",
-                "NIRO_CONFIG_DESTINATION": "../escape",
-                "NIRO_CONFIG_REPLACE": "false",
+                "NIRO_CONFIG_REPOSITORY": "niro-demos/gitea",
+                "NIRO_CONFIG_NIRO_DIR": "../escape",
+                "NIRO_CONFIG_INSTALL_ROOT": temporary,
             }
             result = subprocess.run(
                 [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
             )
             self.assertNotEqual(result.returncode, 0)
 
-    def test_installer_rejects_workspace_as_destination_before_replacement(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            workspace = Path(temporary)
-            marker = workspace / "must-survive"
-            marker.write_text("safe\n", encoding="utf-8")
+    def test_installer_rejects_install_root_outside_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary, tempfile.TemporaryDirectory() as outside:
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
-                "GITHUB_REPOSITORY": "niro-demos/gitea",
-                "NIRO_CONFIG_DESTINATION": ".",
-                "NIRO_CONFIG_REPLACE": "true",
+                "NIRO_CONFIG_REPOSITORY": "niro-demos/gitea",
+                "NIRO_CONFIG_NIRO_DIR": "niro",
+                "NIRO_CONFIG_INSTALL_ROOT": outside,
             }
             result = subprocess.run(
                 [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
             )
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("destination must be", result.stderr)
-            self.assertTrue(marker.is_file())
+            self.assertIn("inside GITHUB_WORKSPACE", result.stderr)
 
     def test_installer_skips_a_repository_without_an_approved_config_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
-                "GITHUB_REPOSITORY": "niro-demos/not-saved-yet",
+                "NIRO_CONFIG_REPOSITORY": "niro-demos/not-saved-yet",
+                "NIRO_CONFIG_NIRO_DIR": "niro",
+                "NIRO_CONFIG_INSTALL_ROOT": temporary,
             }
             result = subprocess.run(
                 [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
@@ -198,6 +204,8 @@ class CatalogTests(unittest.TestCase):
                 "import",
                 "--repository",
                 "niro-demos/example",
+                "--niro-dir",
+                "niro",
                 "--archive",
                 str(archive_path),
                 "--upstream",
@@ -233,6 +241,8 @@ class CatalogTests(unittest.TestCase):
                     "import",
                     "--repository",
                     "niro-demos/example",
+                    "--niro-dir",
+                    "niro",
                     "--archive",
                     str(archive_path),
                     "--upstream",
@@ -254,8 +264,8 @@ class CatalogTests(unittest.TestCase):
             archive_path = root / "partial.tar"
             with tarfile.open(archive_path, "w") as archive:
                 for name, content in (
-                    ("niro/niro.yaml", b"version: 1\n"),
-                    ("niro/accepted-behaviors.yaml", b"accepted_behaviors: []\n"),
+                    ("niro-staging/niro.yaml", b"version: 1\n"),
+                    ("niro-staging/accepted-behaviors.yaml", b"accepted_behaviors: []\n"),
                 ):
                     info = tarfile.TarInfo(name)
                     info.size = len(content)
@@ -266,6 +276,8 @@ class CatalogTests(unittest.TestCase):
                 "import",
                 "--repository",
                 "niro-demos/example",
+                "--niro-dir",
+                "niro-staging",
                 "--archive",
                 str(archive_path),
                 "--upstream",
@@ -282,7 +294,8 @@ class CatalogTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             config = root / "configs" / "niro-demos" / "example"
-            self.assertFalse((config / "niro" / "scope.yaml").exists())
+            self.assertFalse((config / "niro-staging" / "scope.yaml").exists())
+            self.assertIn("niro_dir: niro-staging", (config / "metadata.yaml").read_text())
             self.assertIn("installable: false", (config / "metadata.yaml").read_text())
 
 
