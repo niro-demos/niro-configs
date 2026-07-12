@@ -14,7 +14,7 @@ Add the installer immediately after `actions/checkout` and before running Niro:
 
 ```yaml
 - name: Install approved Niro configuration
-  uses: niro-demos/niro-configs/.github/actions/install@940bb956f0ed56c011fe432eb8df13bed4103d39
+  uses: niro-demos/niro-configs/.github/actions/install@5e67fd8f39949c992af0abcd6efebb1a685353cf
   with:
     repository: ${{ github.repository }}
     niro-dir: niro
@@ -53,13 +53,30 @@ repository's `.github/workflows/ci.yml`.
 1. A project workflow installs its approved config before `niro find` or
    `niro fix`.
 2. Niro uploads `niro-knowledge.tar` after the run.
-3. A trusted contributor imports a complete artifact on a feature branch.
-4. The contributor reviews the sanitized diff and opens a PR.
+3. The post-run proposal action imports the complete artifact on a feature branch.
+4. The action opens a draft PR containing the sanitized replacement.
 5. This repository's CI automatically runs tests, shell syntax checks, and
    catalog validation.
 6. A human reviews and merges the PR. CI validates; it never merges.
 
 The pentest agent never receives a credential that can write to this repository.
+
+## Automatic draft proposals
+
+Generated demo workflows automate the trusted-contributor steps after a
+successful Niro run. They create a token for a dedicated GitHub App, pass that
+token only to the post-run proposal action, replace the selected named config
+from `niro-knowledge.tar`, validate it, and open a draft PR in this repository.
+They never merge the proposal.
+
+Configure these organization or project secrets:
+
+- `NIRO_CONFIGS_APP_ID`
+- `NIRO_CONFIGS_APP_PRIVATE_KEY`
+
+The dedicated App should be installed only on `niro-demos/niro-configs`, with
+repository contents and pull-request write access. The workflow verifies these
+secrets before starting Niro, but does not expose them to the Niro step.
 
 ## What may be stored
 
