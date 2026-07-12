@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "prep-niro-demos-forks.sh"
 INSTALL_ACTION = (
     "niro-demos/niro-configs/.github/actions/install@"
-    "dca1e907983dbfa6bc799b6e2955cc3738e9b4da"
+    "5ca318bab318d108ab9725387bc7d7ddfb17c771"
 )
 
 
