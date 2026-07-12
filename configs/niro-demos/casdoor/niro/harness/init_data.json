@@ -1,0 +1,9 @@
+{
+  "organizations": [{"owner":"admin","name":"niro-org","displayName":"Niro Test Org","defaultApplication":"app-niro","passwordType":"plain","hasPrivilegeConsent":true}],
+  "applications": [{"owner":"admin","name":"app-niro","displayName":"Niro Test App","organization":"niro-org","homepageUrl":"http://127.0.0.1:8000/","redirectUris":["http://127.0.0.1:8000/callback"],"enablePassword":true}],
+  "users": [
+    {"owner":"niro-org","name":"niro-user-a","type":"normal-user","password":"Niro-user-a-2026!","displayName":"Niro User A","email":"niro-user-a@example.test","isAdmin":false,"signupApplication":"app-niro","registerType":"Add User","registerSource":"built-in/admin"},
+    {"owner":"niro-org","name":"niro-user-b","type":"normal-user","password":"Niro-user-b-2026!","displayName":"Niro User B","email":"niro-user-b@example.test","isAdmin":false,"signupApplication":"app-niro","registerType":"Add User","registerSource":"built-in/admin"},
+    {"owner":"niro-org","name":"niro-org-admin","type":"normal-user","password":"Niro-org-admin-2026!","displayName":"Niro Org Admin","email":"niro-org-admin@example.test","isAdmin":true,"signupApplication":"app-niro","registerType":"Add User","registerSource":"built-in/admin"}
+  ]
+}
