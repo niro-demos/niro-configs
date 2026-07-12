@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-action_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-root="$(cd "$action_dir/../../.." && pwd)"
 workspace="${GITHUB_WORKSPACE:?GITHUB_WORKSPACE is required}"
 repository="${NIRO_CONFIG_REPOSITORY:?repository input is required}"
 niro_dir="${NIRO_CONFIG_NIRO_DIR:?niro-dir input is required}"
 install_root="${NIRO_CONFIG_INSTALL_ROOT:?install-root input is required}"
+catalog_repository="${GITHUB_ACTION_REPOSITORY:-niro-demos/niro-configs}"
+github_server_url="${GITHUB_SERVER_URL:-https://github.com}"
 
 if [[ ! "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
   echo "error: repository must be owner/name" >&2
+  exit 2
+fi
+
+if [[ ! "$catalog_repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+  echo "error: action repository must be owner/name" >&2
   exit 2
 fi
 
@@ -43,6 +48,14 @@ case "$install_root_real" in
     ;;
 esac
 
+temporary="$(mktemp -d "$workspace/.niro-config-install.XXXXXX")"
+trap 'rm -rf "$temporary"' EXIT
+root="$temporary/catalog"
+catalog_url="${github_server_url%/}/$catalog_repository.git"
+git clone --quiet --depth 1 --branch main --single-branch "$catalog_url" "$root"
+catalog_sha="$(git -C "$root" rev-parse HEAD)"
+echo "Loaded Niro configuration catalog commit $catalog_sha"
+
 config_root="$root/configs/$repository"
 if [ ! -d "$config_root" ]; then
   echo "No approved Niro configuration for $repository; Niro will initialize it"
@@ -72,8 +85,8 @@ if [ -e "$target" ]; then
 fi
 
 mkdir -p "$(dirname "$target")"
-stage="$(mktemp -d "$workspace/.niro-config-install.XXXXXX")"
-trap 'rm -rf "$stage"' EXIT
+stage="$temporary/stage"
+mkdir -p "$stage"
 cp -R "$source_dir" "$stage/niro"
 mv "$stage/niro" "$target"
 

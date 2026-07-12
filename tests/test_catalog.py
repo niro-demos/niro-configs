@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tarfile
 import tempfile
@@ -51,6 +52,44 @@ class CatalogTests(unittest.TestCase):
         (config / "niro" / "scope.yaml").write_text("targets: []\n", encoding="utf-8")
         (harness / "start.sh").write_text("#!/bin/sh\n", encoding="utf-8")
         return config
+
+    def make_remote_catalog(self, root: Path) -> tuple[Path, Path]:
+        server = root / "git-server"
+        catalog = server / "niro-demos" / "niro-configs.git"
+        catalog.mkdir(parents=True)
+        subprocess.run(
+            ["git", "init", "--initial-branch=main"],
+            cwd=catalog,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "Catalog Test"], cwd=catalog, check=True
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "catalog@example.test"],
+            cwd=catalog,
+            check=True,
+        )
+        scripts = catalog / "scripts"
+        scripts.mkdir()
+        shutil.copy2(CATALOG, scripts / "catalog.py")
+        self.make_config(catalog)
+        self.commit_catalog(catalog, "initial catalog")
+        return server, catalog
+
+    def commit_catalog(self, catalog: Path, message: str) -> None:
+        subprocess.run(
+            ["git", "add", "."], cwd=catalog, text=True, capture_output=True, check=True
+        )
+        subprocess.run(
+            ["git", "commit", "-m", message],
+            cwd=catalog,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
 
     def test_validate_accepts_reviewable_config_and_harness(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -118,10 +157,13 @@ class CatalogTests(unittest.TestCase):
     def test_installer_copies_only_approved_config_and_always_replaces_it(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
+            server, catalog = self.make_remote_catalog(workspace)
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": str(workspace),
-                "NIRO_CONFIG_REPOSITORY": "niro-demos/gitea",
+                "GITHUB_SERVER_URL": server.as_uri(),
+                "GITHUB_ACTION_REPOSITORY": "niro-demos/niro-configs",
+                "NIRO_CONFIG_REPOSITORY": "niro-demos/example",
                 "NIRO_CONFIG_NIRO_DIR": "niro",
                 "NIRO_CONFIG_INSTALL_ROOT": str(workspace),
             }
@@ -131,14 +173,22 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(first.returncode, 0, first.stderr)
             self.assertTrue((workspace / "niro" / "harness" / "start.sh").is_file())
             self.assertFalse((workspace / "niro" / "findings").exists())
+            self.assertIn("Loaded Niro configuration catalog commit", first.stdout)
 
             stale = workspace / "niro" / "stale"
             stale.write_text("old\n", encoding="utf-8")
+            source_config = catalog / "configs" / "niro-demos" / "example" / "niro"
+            (source_config / "niro.yaml").write_text("version: 2\n", encoding="utf-8")
+            self.commit_catalog(catalog, "update catalog")
             second = subprocess.run(
                 [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
             )
             self.assertEqual(second.returncode, 0, second.stderr)
             self.assertFalse(stale.exists())
+            self.assertEqual(
+                (workspace / "niro" / "niro.yaml").read_text(encoding="utf-8"),
+                "version: 2\n",
+            )
 
     def test_installer_rejects_niro_directory_traversal(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -171,9 +221,13 @@ class CatalogTests(unittest.TestCase):
 
     def test_installer_skips_a_repository_without_an_approved_config_by_default(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            server, _ = self.make_remote_catalog(workspace)
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
+                "GITHUB_SERVER_URL": server.as_uri(),
+                "GITHUB_ACTION_REPOSITORY": "niro-demos/niro-configs",
                 "NIRO_CONFIG_REPOSITORY": "niro-demos/not-saved-yet",
                 "NIRO_CONFIG_NIRO_DIR": "niro",
                 "NIRO_CONFIG_INSTALL_ROOT": temporary,

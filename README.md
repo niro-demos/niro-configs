@@ -36,6 +36,12 @@ configs/<repository>/<niro-dir>
     -> <install-root>/<niro-dir>
 ```
 
+The action implementation is pinned to an immutable commit, while the reviewed
+catalog data is loaded from this repository's protected `main` branch at run
+time. The installer logs the exact catalog commit it used. Merging a reviewed
+configuration therefore makes it available to the next project run without
+requiring workflow changes.
+
 A repository may keep multiple independent named configurations, such as
 `niro-local`, `niro-staging`, and `niro-prod`. Installing or proposing one name
 does not modify any sibling configuration.
@@ -144,8 +150,9 @@ Fleet workflow generation also lives here:
 scripts/prep-niro-demos-forks.sh --apply --only=workflows gitea casdoor
 ```
 
-The generated Find and Fix workflows use an immutable installer commit. When the
-action or catalog changes, update that pin before refreshing project workflows.
+The generated Find and Fix workflows use an immutable installer commit. Update
+that pin when installer code changes. Reviewed catalog changes are loaded from
+protected `main` automatically and do not require project workflow updates.
 
 ## Repository layout
 
