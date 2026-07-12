@@ -44,7 +44,9 @@ class CatalogTests(unittest.TestCase):
         config = root / "configs" / "niro-demos" / "example"
         harness = config / "niro" / "harness"
         harness.mkdir(parents=True)
-        (config / "metadata.yaml").write_text(metadata(), encoding="utf-8")
+        metadata_dir = config / "metadata"
+        metadata_dir.mkdir()
+        (metadata_dir / "niro.yaml").write_text(metadata(), encoding="utf-8")
         (config / "niro" / "niro.yaml").write_text("version: 1\n", encoding="utf-8")
         (config / "niro" / "scope.yaml").write_text("targets: []\n", encoding="utf-8")
         (harness / "start.sh").write_text("#!/bin/sh\n", encoding="utf-8")
@@ -58,8 +60,8 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_published_catalog_contains_only_installable_configs(self) -> None:
-        for metadata_path in sorted((ROOT / "configs").glob("*/*/metadata.yaml")):
-            with self.subTest(config=metadata_path.parent.relative_to(ROOT / "configs")):
+        for metadata_path in sorted((ROOT / "configs").glob("*/*/metadata/*.yaml")):
+            with self.subTest(config=metadata_path.relative_to(ROOT / "configs")):
                 self.assertIn(
                     "installable: true",
                     metadata_path.read_text(encoding="utf-8").splitlines(),
@@ -70,7 +72,7 @@ class CatalogTests(unittest.TestCase):
             root = Path(temporary)
             config = self.make_config(root)
             (config / "niro" / "scope.yaml").unlink()
-            metadata_path = config / "metadata.yaml"
+            metadata_path = config / "metadata" / "niro.yaml"
             metadata_path.write_text(
                 metadata_path.read_text(encoding="utf-8").replace(
                     "installable: true", "installable: false"
@@ -225,6 +227,127 @@ class CatalogTests(unittest.TestCase):
             self.assertFalse((config / "findings").exists())
             self.assertFalse((config / "credentials.yaml").exists())
 
+    def test_import_replace_replaces_the_complete_niro_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = self.make_config(root)
+            stale = config / "niro" / "harness" / "stale.sh"
+            stale.write_text("#!/bin/sh\n", encoding="utf-8")
+
+            archive_path = root / "replacement.tar"
+            with tarfile.open(archive_path, "w") as archive:
+                for name, content in (
+                    ("niro/niro.yaml", b"version: 1\n"),
+                    ("niro/scope.yaml", b"targets: []\n"),
+                    ("niro/harness/start.sh", b"#!/bin/sh\n# replacement\n"),
+                ):
+                    info = tarfile.TarInfo(name)
+                    info.size = len(content)
+                    archive.addfile(info, io.BytesIO(content))
+
+            result = self.run_catalog(
+                root,
+                "import",
+                "--repository",
+                "niro-demos/example",
+                "--niro-dir",
+                "niro",
+                "--archive",
+                str(archive_path),
+                "--upstream",
+                "example/example",
+                "--upstream-sha",
+                "a" * 40,
+                "--niro-version",
+                "v1.2.3",
+                "--source-run",
+                "https://github.com/niro-demos/example/actions/runs/2",
+                "--source-run-conclusion",
+                "success",
+                "--replace",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(stale.exists())
+            self.assertIn(
+                "# replacement",
+                (config / "niro" / "harness" / "start.sh").read_text(encoding="utf-8"),
+            )
+
+    def test_multiple_named_directories_are_replaced_independently(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+
+            def archive(niro_dir: str, marker: str) -> Path:
+                path = root / f"{niro_dir}-{marker}.tar"
+                with tarfile.open(path, "w") as output:
+                    for name, content in (
+                        (f"{niro_dir}/niro.yaml", b"version: 1\n"),
+                        (f"{niro_dir}/scope.yaml", b"targets: []\n"),
+                        (
+                            f"{niro_dir}/harness/start.sh",
+                            f"#!/bin/sh\n# {marker}\n".encode(),
+                        ),
+                    ):
+                        info = tarfile.TarInfo(name)
+                        info.size = len(content)
+                        output.addfile(info, io.BytesIO(content))
+                return path
+
+            def import_named(niro_dir: str, marker: str, *, replace: bool = False):
+                arguments = [
+                    "import",
+                    "--repository",
+                    "niro-demos/example",
+                    "--niro-dir",
+                    niro_dir,
+                    "--archive",
+                    str(archive(niro_dir, marker)),
+                    "--upstream",
+                    "example/example",
+                    "--upstream-sha",
+                    "a" * 40,
+                    "--niro-version",
+                    "v1.2.3",
+                    "--source-run",
+                    f"https://github.com/niro-demos/example/actions/runs/{marker}",
+                    "--source-run-conclusion",
+                    "success",
+                ]
+                if replace:
+                    arguments.append("--replace")
+                return self.run_catalog(root, *arguments)
+
+            local = import_named("niro-local", "1")
+            self.assertEqual(local.returncode, 0, local.stderr)
+            staging = import_named("niro-staging", "2")
+            self.assertEqual(staging.returncode, 0, staging.stderr)
+
+            config = root / "configs" / "niro-demos" / "example"
+            local_file = config / "niro-local" / "harness" / "start.sh"
+            local_before = local_file.read_bytes()
+            local_metadata = config / "metadata" / "niro-local.yaml"
+            local_metadata_before = local_metadata.read_bytes()
+            staging_file = config / "niro-staging" / "harness" / "start.sh"
+            self.assertIn("# 2", staging_file.read_text(encoding="utf-8"))
+
+            replacement = import_named("niro-staging", "3", replace=True)
+            self.assertEqual(replacement.returncode, 0, replacement.stderr)
+            self.assertEqual(local_file.read_bytes(), local_before)
+            self.assertEqual(local_metadata.read_bytes(), local_metadata_before)
+            self.assertIn("# 3", staging_file.read_text(encoding="utf-8"))
+            self.assertTrue((config / "metadata" / "niro-staging.yaml").is_file())
+            for niro_dir in ("niro-local", "niro-staging"):
+                status = self.run_catalog(
+                    root,
+                    "installable",
+                    "--repository",
+                    "niro-demos/example",
+                    "--niro-dir",
+                    niro_dir,
+                )
+                self.assertEqual(status.returncode, 0, status.stderr)
+                self.assertEqual(status.stdout.strip(), "true")
+
     def test_import_rejects_archive_symlinks_and_traversal(self) -> None:
         for name, member_type in (("../escape", tarfile.REGTYPE), ("niro/link", tarfile.SYMTYPE)):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
@@ -295,9 +418,9 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             config = root / "configs" / "niro-demos" / "example"
             self.assertFalse((config / "niro-staging" / "scope.yaml").exists())
-            self.assertIn("niro_dir: niro-staging", (config / "metadata.yaml").read_text())
-            self.assertIn("installable: false", (config / "metadata.yaml").read_text())
-
+            staging_metadata = config / "metadata" / "niro-staging.yaml"
+            self.assertIn("niro_dir: niro-staging", staging_metadata.read_text())
+            self.assertIn("installable: false", staging_metadata.read_text())
 
 if __name__ == "__main__":
     unittest.main()

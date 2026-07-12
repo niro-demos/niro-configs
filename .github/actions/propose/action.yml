@@ -1,0 +1,40 @@
+name: Propose Niro configuration
+description: Sanitize run knowledge and open a reviewed catalog PR
+
+inputs:
+  catalog-token:
+    description: Token scoped to write niro-configs contents and pull requests
+    required: true
+  source-token:
+    description: Token scoped to read source repository metadata
+    required: true
+  archive:
+    description: Niro knowledge tar path inside the workspace
+    required: true
+  repository:
+    description: Source repository in owner/name form
+    required: true
+  niro-dir:
+    description: Niro configuration directory name
+    required: true
+  source-sha:
+    description: Exact tested source commit
+    required: true
+  source-run:
+    description: GitHub Actions source run URL
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Propose reviewed configuration
+      shell: bash
+      env:
+        NIRO_CONFIG_CATALOG_TOKEN: ${{ inputs.catalog-token }}
+        NIRO_CONFIG_SOURCE_TOKEN: ${{ inputs.source-token }}
+        NIRO_CONFIG_ARCHIVE: ${{ inputs.archive }}
+        NIRO_CONFIG_REPOSITORY: ${{ inputs.repository }}
+        NIRO_CONFIG_NIRO_DIR: ${{ inputs.niro-dir }}
+        NIRO_CONFIG_SOURCE_SHA: ${{ inputs.source-sha }}
+        NIRO_CONFIG_SOURCE_RUN: ${{ inputs.source-run }}
+      run: python3 "$GITHUB_ACTION_PATH/../../../scripts/propose.py"
