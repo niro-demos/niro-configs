@@ -24,7 +24,9 @@
 # SECRETS: the installed workflows need org/repo secrets to actually RUN —
 # CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY, CODEX_AUTH_JSON_B64 /
 # OPENAI_API_KEY, COPILOT_PROVIDER_API_KEY, and NIRO_APP_CLIENT_ID +
-# NIRO_APP_PRIVATE_KEY (fix mode). This installs files only.
+# NIRO_APP_PRIVATE_KEY (fix mode), plus NIRO_CONFIGS_APP_ID +
+# NIRO_CONFIGS_APP_PRIVATE_KEY (post-run draft config proposals). This installs
+# files only.
 #
 # Prereqs: gh CLI + git, logged in with the `repo` scope — plus the `workflow`
 # scope to push workflow files (the workflows phase checks and, if it's missing,
@@ -107,7 +109,7 @@ jobs:
           persist-credentials: false
 
       - name: Install approved Niro configuration
-        uses: niro-demos/niro-configs/.github/actions/install@940bb956f0ed56c011fe432eb8df13bed4103d39
+        uses: niro-demos/niro-configs/.github/actions/install@5e67fd8f39949c992af0abcd6efebb1a685353cf
         with:
           repository: ${{ github.repository }}
           niro-dir: niro
@@ -116,6 +118,17 @@ jobs:
       - name: Install Niro
         shell: bash
         run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
+
+      - name: Verify Niro config proposal credentials
+        shell: bash
+        env:
+          NIRO_CONFIGS_APP_ID: ${{ secrets.NIRO_CONFIGS_APP_ID }}
+          NIRO_CONFIGS_APP_PRIVATE_KEY: ${{ secrets.NIRO_CONFIGS_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$NIRO_CONFIGS_APP_ID" ] || [ -z "$NIRO_CONFIGS_APP_PRIVATE_KEY" ]; then
+            echo "::error::NIRO_CONFIGS_APP_ID and NIRO_CONFIGS_APP_PRIVATE_KEY are required"
+            exit 1
+          fi
 
       # Codex/Copilot setup and other CI settings:
       # https://github.com/apxlabs-ai/niro/blob/main/docs/ci-environment.md
@@ -131,6 +144,26 @@ jobs:
           COPILOT_PROVIDER_TYPE: openai
           COPILOT_MODEL: z-ai/glm-5.2
         run: niro find --agent=@@AGENT@@ --goal="Pentest this application" --config-dir=niro --include-findings=true --upload-debug-logs=true
+
+      - name: Create Niro config catalog token
+        id: niro-configs-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.NIRO_CONFIGS_APP_ID }}
+          private-key: ${{ secrets.NIRO_CONFIGS_APP_PRIVATE_KEY }}
+          owner: niro-demos
+          repositories: niro-configs
+
+      - name: Propose Niro configuration update
+        uses: niro-demos/niro-configs/.github/actions/propose@5e67fd8f39949c992af0abcd6efebb1a685353cf
+        with:
+          catalog-token: ${{ steps.niro-configs-token.outputs.token }}
+          source-token: ${{ github.token }}
+          archive: ${{ github.workspace }}/niro-knowledge.tar
+          repository: ${{ github.repository }}
+          niro-dir: niro
+          source-sha: ${{ github.sha }}
+          source-run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Upload Niro knowledge
         if: always()
@@ -185,7 +218,7 @@ jobs:
           persist-credentials: false
 
       - name: Install approved Niro configuration
-        uses: niro-demos/niro-configs/.github/actions/install@940bb956f0ed56c011fe432eb8df13bed4103d39
+        uses: niro-demos/niro-configs/.github/actions/install@5e67fd8f39949c992af0abcd6efebb1a685353cf
         with:
           repository: ${{ github.repository }}
           niro-dir: niro
@@ -194,6 +227,17 @@ jobs:
       - name: Install Niro
         shell: bash
         run: curl -fsSL https://raw.githubusercontent.com/apxlabs-ai/niro/main/install.sh | sh
+
+      - name: Verify Niro config proposal credentials
+        shell: bash
+        env:
+          NIRO_CONFIGS_APP_ID: ${{ secrets.NIRO_CONFIGS_APP_ID }}
+          NIRO_CONFIGS_APP_PRIVATE_KEY: ${{ secrets.NIRO_CONFIGS_APP_PRIVATE_KEY }}
+        run: |
+          if [ -z "$NIRO_CONFIGS_APP_ID" ] || [ -z "$NIRO_CONFIGS_APP_PRIVATE_KEY" ]; then
+            echo "::error::NIRO_CONFIGS_APP_ID and NIRO_CONFIGS_APP_PRIVATE_KEY are required"
+            exit 1
+          fi
 
       # Codex/Copilot setup and other CI settings:
       # https://github.com/apxlabs-ai/niro/blob/main/docs/ci-environment.md
@@ -211,6 +255,26 @@ jobs:
           COPILOT_PROVIDER_TYPE: openai
           COPILOT_MODEL: z-ai/glm-5.2
         run: niro fix --agent=@@AGENT@@ --goal="Pentest this application" --config-dir=niro --include-findings=true --upload-debug-logs=true
+
+      - name: Create Niro config catalog token
+        id: niro-configs-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.NIRO_CONFIGS_APP_ID }}
+          private-key: ${{ secrets.NIRO_CONFIGS_APP_PRIVATE_KEY }}
+          owner: niro-demos
+          repositories: niro-configs
+
+      - name: Propose Niro configuration update
+        uses: niro-demos/niro-configs/.github/actions/propose@5e67fd8f39949c992af0abcd6efebb1a685353cf
+        with:
+          catalog-token: ${{ steps.niro-configs-token.outputs.token }}
+          source-token: ${{ github.token }}
+          archive: ${{ github.workspace }}/niro-knowledge.tar
+          repository: ${{ github.repository }}
+          niro-dir: niro
+          source-sha: ${{ github.sha }}
+          source-run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Upload Niro knowledge
         if: always()
@@ -271,7 +335,7 @@ printf '  %s\n' "${REPOS[@]}"
 echo
 if [ "$DO_APPLY" -eq 1 ]; then MODE="APPLY"; else MODE="DRY RUN"; fi
 echo "Mode: $MODE"
-[ "$do_workflows" -eq 1 ] && echo "Reminder: workflows need org/repo secrets to run (CLAUDE_CODE_OAUTH_TOKEN, CODEX_AUTH_JSON_B64, COPILOT_PROVIDER_API_KEY, NIRO_APP_*). Files only."
+[ "$do_workflows" -eq 1 ] && echo "Reminder: workflows need agent, NIRO_APP_*, and NIRO_CONFIGS_APP_* secrets to run. Files only."
 echo
 
 if [ "$DO_APPLY" -eq 1 ]; then

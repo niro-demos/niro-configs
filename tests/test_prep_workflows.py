@@ -8,7 +8,11 @@ SCRIPT = ROOT / "scripts" / "prep-niro-demos-forks.sh"
 ACTION = ROOT / ".github" / "actions" / "install" / "action.yml"
 INSTALL_ACTION = (
     "niro-demos/niro-configs/.github/actions/install@"
-    "940bb956f0ed56c011fe432eb8df13bed4103d39"
+    "5e67fd8f39949c992af0abcd6efebb1a685353cf"
+)
+PROPOSE_ACTION = (
+    "niro-demos/niro-configs/.github/actions/propose@"
+    "5e67fd8f39949c992af0abcd6efebb1a685353cf"
 )
 
 
@@ -41,6 +45,33 @@ class PrepWorkflowTests(unittest.TestCase):
                 self.assertIn("niro-dir: niro", install_step)
                 self.assertIn("install-root: ${{ github.workspace }}", install_step)
 
+    def test_find_and_fix_propose_config_after_niro(self) -> None:
+        for name in ("find_template", "fix_template"):
+            with self.subTest(template=name):
+                block = self.template(name)
+                run_at = block.index("- name: Run Niro")
+                preflight_at = block.index("- name: Verify Niro config proposal credentials")
+                token_at = block.index("uses: actions/create-github-app-token@v3")
+                propose_at = block.index(f"uses: {PROPOSE_ACTION}")
+                upload_at = block.index("- name: Upload Niro knowledge")
+                self.assertLess(preflight_at, run_at)
+                self.assertLess(run_at, token_at)
+                self.assertLess(token_at, propose_at)
+                self.assertLess(propose_at, upload_at)
+
+                run_step = block[run_at:token_at]
+                self.assertNotIn("NIRO_CONFIGS_APP_ID", run_step)
+                self.assertNotIn("NIRO_CONFIGS_APP_PRIVATE_KEY", run_step)
+
+                proposal = block[propose_at:upload_at]
+                self.assertIn("catalog-token: ${{ steps.niro-configs-token.outputs.token }}", proposal)
+                self.assertIn("source-token: ${{ github.token }}", proposal)
+                self.assertIn("archive: ${{ github.workspace }}/niro-knowledge.tar", proposal)
+                self.assertIn("repository: ${{ github.repository }}", proposal)
+                self.assertIn("niro-dir: niro", proposal)
+                self.assertIn("source-sha: ${{ github.sha }}", proposal)
+                self.assertIn("${{ github.run_id }}", proposal)
+
     def test_action_requires_only_generic_location_inputs(self) -> None:
         action = ACTION.read_text(encoding="utf-8")
         for name in ("repository", "niro-dir", "install-root"):
@@ -49,12 +80,13 @@ class PrepWorkflowTests(unittest.TestCase):
         self.assertNotRegex(action, r"(?m)^  (replace|if-missing|destination):")
 
     def test_action_is_pinned_to_an_immutable_commit(self) -> None:
-        references = re.findall(
-            r"uses: niro-demos/niro-configs/\.github/actions/install@([^\s]+)",
-            self.script,
-        )
-        self.assertEqual(len(references), 2)
-        self.assertTrue(all(re.fullmatch(r"[0-9a-f]{40}", ref) for ref in references))
+        for action in ("install", "propose"):
+            references = re.findall(
+                rf"uses: niro-demos/niro-configs/\.github/actions/{action}@([^\s]+)",
+                self.script,
+            )
+            self.assertEqual(len(references), 2)
+            self.assertTrue(all(re.fullmatch(r"[0-9a-f]{40}", ref) for ref in references))
 
     def test_success_does_not_inherit_false_trailing_and_status(self) -> None:
         self.assertNotIn('[ "$fail" -gt 0 ] && exit 1', self.script)
