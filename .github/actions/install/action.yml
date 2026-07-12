@@ -1,0 +1,26 @@
+name: Install approved Niro configuration
+description: Copy a reviewed repository-specific Niro config into the workspace
+
+inputs:
+  repository:
+    description: GitHub owner/repository whose config should be installed
+    required: true
+  destination:
+    description: Workspace-relative destination
+    required: false
+    default: niro
+  replace:
+    description: Replace an existing destination when set to true
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Install configuration
+      shell: bash
+      env:
+        NIRO_CONFIG_REPOSITORY: ${{ inputs.repository }}
+        NIRO_CONFIG_DESTINATION: ${{ inputs.destination }}
+        NIRO_CONFIG_REPLACE: ${{ inputs.replace }}
+      run: "$GITHUB_ACTION_PATH/install.sh"
