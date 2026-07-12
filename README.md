@@ -59,24 +59,22 @@ repository's `.github/workflows/ci.yml`.
    catalog validation.
 6. A human reviews and merges the PR. CI validates; it never merges.
 
-The pentest agent never receives a credential that can write to this repository.
-
 ## Automatic draft proposals
 
 Generated demo workflows automate the trusted-contributor steps after a
-successful Niro run. They create a token for a dedicated GitHub App, pass that
-token only to the post-run proposal action, replace the selected named config
-from `niro-knowledge.tar`, validate it, and open a draft PR in this repository.
-They never merge the proposal.
+successful Niro run. They use the existing Niro GitHub App credentials to mint
+a repository-scoped token for the post-run proposal action, replace the selected
+named config from `niro-knowledge.tar`, validate it, and open a draft PR in this
+repository. They never merge the proposal.
 
 Configure these organization or project secrets:
 
-- `NIRO_CONFIGS_APP_ID`
-- `NIRO_CONFIGS_APP_PRIVATE_KEY`
+- `NIRO_APP_CLIENT_ID`
+- `NIRO_APP_PRIVATE_KEY`
 
-The dedicated App should be installed only on `niro-demos/niro-configs`, with
-repository contents and pull-request write access. The workflow verifies these
-secrets before starting Niro, but does not expose them to the Niro step.
+The App must be installed on `niro-demos/niro-configs`, with repository contents
+and pull-request write access. The workflow verifies these secrets before
+starting Niro. Fix workflows also provide them to Niro so it can open fix PRs.
 
 ## What may be stored
 

@@ -24,8 +24,7 @@
 # SECRETS: the installed workflows need org/repo secrets to actually RUN —
 # CLAUDE_CODE_OAUTH_TOKEN / ANTHROPIC_API_KEY, CODEX_AUTH_JSON_B64 /
 # OPENAI_API_KEY, COPILOT_PROVIDER_API_KEY, and NIRO_APP_CLIENT_ID +
-# NIRO_APP_PRIVATE_KEY (fix mode), plus NIRO_CONFIGS_APP_ID +
-# NIRO_CONFIGS_APP_PRIVATE_KEY (post-run draft config proposals). This installs
+# NIRO_APP_PRIVATE_KEY (fix mode and post-run draft config proposals). This installs
 # files only.
 #
 # Prereqs: gh CLI + git, logged in with the `repo` scope — plus the `workflow`
@@ -122,11 +121,11 @@ jobs:
       - name: Verify Niro config proposal credentials
         shell: bash
         env:
-          NIRO_CONFIGS_APP_ID: ${{ secrets.NIRO_CONFIGS_APP_ID }}
-          NIRO_CONFIGS_APP_PRIVATE_KEY: ${{ secrets.NIRO_CONFIGS_APP_PRIVATE_KEY }}
+          NIRO_APP_CLIENT_ID: ${{ secrets.NIRO_APP_CLIENT_ID }}
+          NIRO_APP_PRIVATE_KEY: ${{ secrets.NIRO_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "$NIRO_CONFIGS_APP_ID" ] || [ -z "$NIRO_CONFIGS_APP_PRIVATE_KEY" ]; then
-            echo "::error::NIRO_CONFIGS_APP_ID and NIRO_CONFIGS_APP_PRIVATE_KEY are required"
+          if [ -z "$NIRO_APP_CLIENT_ID" ] || [ -z "$NIRO_APP_PRIVATE_KEY" ]; then
+            echo "::error::NIRO_APP_CLIENT_ID and NIRO_APP_PRIVATE_KEY are required"
             exit 1
           fi
 
@@ -149,8 +148,8 @@ jobs:
         id: niro-configs-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.NIRO_CONFIGS_APP_ID }}
-          private-key: ${{ secrets.NIRO_CONFIGS_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.NIRO_APP_CLIENT_ID }}
+          private-key: ${{ secrets.NIRO_APP_PRIVATE_KEY }}
           owner: niro-demos
           repositories: niro-configs
 
@@ -231,11 +230,11 @@ jobs:
       - name: Verify Niro config proposal credentials
         shell: bash
         env:
-          NIRO_CONFIGS_APP_ID: ${{ secrets.NIRO_CONFIGS_APP_ID }}
-          NIRO_CONFIGS_APP_PRIVATE_KEY: ${{ secrets.NIRO_CONFIGS_APP_PRIVATE_KEY }}
+          NIRO_APP_CLIENT_ID: ${{ secrets.NIRO_APP_CLIENT_ID }}
+          NIRO_APP_PRIVATE_KEY: ${{ secrets.NIRO_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "$NIRO_CONFIGS_APP_ID" ] || [ -z "$NIRO_CONFIGS_APP_PRIVATE_KEY" ]; then
-            echo "::error::NIRO_CONFIGS_APP_ID and NIRO_CONFIGS_APP_PRIVATE_KEY are required"
+          if [ -z "$NIRO_APP_CLIENT_ID" ] || [ -z "$NIRO_APP_PRIVATE_KEY" ]; then
+            echo "::error::NIRO_APP_CLIENT_ID and NIRO_APP_PRIVATE_KEY are required"
             exit 1
           fi
 
@@ -260,8 +259,8 @@ jobs:
         id: niro-configs-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.NIRO_CONFIGS_APP_ID }}
-          private-key: ${{ secrets.NIRO_CONFIGS_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.NIRO_APP_CLIENT_ID }}
+          private-key: ${{ secrets.NIRO_APP_PRIVATE_KEY }}
           owner: niro-demos
           repositories: niro-configs
 
@@ -335,7 +334,7 @@ printf '  %s\n' "${REPOS[@]}"
 echo
 if [ "$DO_APPLY" -eq 1 ]; then MODE="APPLY"; else MODE="DRY RUN"; fi
 echo "Mode: $MODE"
-[ "$do_workflows" -eq 1 ] && echo "Reminder: workflows need agent, NIRO_APP_*, and NIRO_CONFIGS_APP_* secrets to run. Files only."
+[ "$do_workflows" -eq 1 ] && echo "Reminder: workflows need agent and NIRO_APP_* secrets to run. Files only."
 echo
 
 if [ "$DO_APPLY" -eq 1 ]; then
