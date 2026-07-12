@@ -1,9 +1,0 @@
-repository: niro-demos/saleor
-upstream: saleor/saleor
-upstream_sha: 6d2a8e04eae04f878d1f05f64f1df9a6f961227a
-niro_version: 0.1.51
-installable: false
-validated_at: 2026-07-12
-source_run: https://github.com/niro-demos/saleor/actions/runs/29184703558
-source_run_conclusion: failure
-source_run_note: Claude session limit left configuration incomplete

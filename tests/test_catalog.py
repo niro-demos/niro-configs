@@ -56,6 +56,14 @@ class CatalogTests(unittest.TestCase):
             result = self.run_catalog(root, "validate")
             self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_published_catalog_contains_only_installable_configs(self) -> None:
+        for metadata_path in sorted((ROOT / "configs").glob("*/*/metadata.yaml")):
+            with self.subTest(config=metadata_path.parent.relative_to(ROOT / "configs")):
+                self.assertIn(
+                    "installable: true",
+                    metadata_path.read_text(encoding="utf-8").splitlines(),
+                )
+
     def test_validate_accepts_explicit_non_installable_partial_state(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -175,23 +183,6 @@ class CatalogTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn("No approved Niro configuration", result.stdout)
-            self.assertFalse((Path(temporary) / "niro").exists())
-
-    def test_installer_skips_saved_partial_state(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            environment = {
-                **os.environ,
-                "GITHUB_WORKSPACE": temporary,
-                "GITHUB_REPOSITORY": "niro-demos/saleor",
-                "NIRO_CONFIG_DESTINATION": "niro",
-                "NIRO_CONFIG_REPLACE": "true",
-                "NIRO_CONFIG_IF_MISSING": "skip",
-            }
-            result = subprocess.run(
-                [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
-            )
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn("partial and will not be installed", result.stdout)
             self.assertFalse((Path(temporary) / "niro").exists())
 
     def test_import_keeps_config_and_harness_but_drops_findings(self) -> None:

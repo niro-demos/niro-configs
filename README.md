@@ -37,10 +37,10 @@ they contain public demo seed data rather than live secrets.
 | `niro-demos/casdoor` | Installable | Successful Codex run |
 | `niro-demos/dify` | Installable | Config completed before Claude session limit |
 | `niro-demos/gitea` | Installable | Successful Codex run |
-| `niro-demos/saleor` | Partial, not installed | Claude session limit interrupted setup |
 
-OpenObserve is intentionally absent because its Copilot run failed before Niro
-produced usable configuration.
+Saleor is intentionally absent because its Claude run produced only partial
+setup. OpenObserve is absent because its Copilot run failed before Niro produced
+usable configuration.
 
 ## Install in a workflow
 
