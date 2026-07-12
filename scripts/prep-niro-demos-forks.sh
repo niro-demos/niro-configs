@@ -107,7 +107,7 @@ jobs:
           persist-credentials: false
 
       - name: Install approved Niro configuration
-        uses: niro-demos/niro-configs/.github/actions/install@5ca318bab318d108ab9725387bc7d7ddfb17c771
+        uses: niro-demos/niro-configs/.github/actions/install@fdfd8be011b91eb677da786f9f2dbe30f304ed8c
         with:
           replace: "true"
 
@@ -183,7 +183,7 @@ jobs:
           persist-credentials: false
 
       - name: Install approved Niro configuration
-        uses: niro-demos/niro-configs/.github/actions/install@5ca318bab318d108ab9725387bc7d7ddfb17c771
+        uses: niro-demos/niro-configs/.github/actions/install@fdfd8be011b91eb677da786f9f2dbe30f304ed8c
         with:
           replace: "true"
 
