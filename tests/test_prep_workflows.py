@@ -8,7 +8,7 @@ SCRIPT = ROOT / "scripts" / "prep-niro-demos-forks.sh"
 ACTION = ROOT / ".github" / "actions" / "install" / "action.yml"
 INSTALL_ACTION = (
     "niro-demos/niro-configs/.github/actions/install@"
-    "bde2a5e55557ae08df03d74b40d996ce32d755d4"
+    "940bb956f0ed56c011fe432eb8df13bed4103d39"
 )
 
 

@@ -14,7 +14,7 @@ Add the installer immediately after `actions/checkout` and before running Niro:
 
 ```yaml
 - name: Install approved Niro configuration
-  uses: niro-demos/niro-configs/.github/actions/install@bde2a5e55557ae08df03d74b40d996ce32d755d4
+  uses: niro-demos/niro-configs/.github/actions/install@940bb956f0ed56c011fe432eb8df13bed4103d39
   with:
     repository: ${{ github.repository }}
     niro-dir: niro
