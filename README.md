@@ -49,13 +49,11 @@ Pin the action to an immutable commit:
 ```yaml
 - name: Install approved Niro configuration
   uses: niro-demos/niro-configs/.github/actions/install@<commit-sha>
-  with:
-    replace: "true"
 ```
 
-The action selects `configs/$GITHUB_REPOSITORY/niro` automatically. It refuses
-to overwrite an existing `niro/` directory unless `replace: "true"` is
-explicitly supplied.
+The action selects `configs/$GITHUB_REPOSITORY/niro` automatically. An approved
+catalog entry replaces the workspace's existing `niro/`; a missing entry is a
+no-op so Niro can initialize normally.
 
 ## Import a candidate
 

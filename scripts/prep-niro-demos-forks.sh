@@ -108,8 +108,6 @@ jobs:
 
       - name: Install approved Niro configuration
         uses: niro-demos/niro-configs/.github/actions/install@4f63f08603ed6f858ce4139ece6579085c3d8487
-        with:
-          replace: "true"
 
       - name: Install Niro
         shell: bash
@@ -184,8 +182,6 @@ jobs:
 
       - name: Install approved Niro configuration
         uses: niro-demos/niro-configs/.github/actions/install@4f63f08603ed6f858ce4139ece6579085c3d8487
-        with:
-          replace: "true"
 
       - name: Install Niro
         shell: bash

@@ -107,15 +107,13 @@ class CatalogTests(unittest.TestCase):
             result = self.run_catalog(root, "validate")
             self.assertNotEqual(result.returncode, 0)
 
-    def test_installer_copies_only_approved_config_and_requires_explicit_replace(self) -> None:
+    def test_installer_copies_only_approved_config_and_always_replaces_it(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
             environment = {
                 **os.environ,
                 "GITHUB_WORKSPACE": str(workspace),
                 "GITHUB_REPOSITORY": "niro-demos/gitea",
-                "NIRO_CONFIG_DESTINATION": "niro",
-                "NIRO_CONFIG_REPLACE": "false",
             }
             first = subprocess.run(
                 [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
@@ -124,16 +122,13 @@ class CatalogTests(unittest.TestCase):
             self.assertTrue((workspace / "niro" / "harness" / "start.sh").is_file())
             self.assertFalse((workspace / "niro" / "findings").exists())
 
+            stale = workspace / "niro" / "stale"
+            stale.write_text("old\n", encoding="utf-8")
             second = subprocess.run(
                 [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
             )
-            self.assertNotEqual(second.returncode, 0)
-
-            environment["NIRO_CONFIG_REPLACE"] = "true"
-            third = subprocess.run(
-                [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
-            )
-            self.assertEqual(third.returncode, 0, third.stderr)
+            self.assertEqual(second.returncode, 0, second.stderr)
+            self.assertFalse(stale.exists())
 
     def test_installer_rejects_destination_traversal(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -174,9 +169,6 @@ class CatalogTests(unittest.TestCase):
                 **os.environ,
                 "GITHUB_WORKSPACE": temporary,
                 "GITHUB_REPOSITORY": "niro-demos/not-saved-yet",
-                "NIRO_CONFIG_DESTINATION": "niro",
-                "NIRO_CONFIG_REPLACE": "false",
-                "NIRO_CONFIG_IF_MISSING": "skip",
             }
             result = subprocess.run(
                 [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False

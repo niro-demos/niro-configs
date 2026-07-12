@@ -37,11 +37,16 @@ class PrepWorkflowTests(unittest.TestCase):
                 self.assertIn(expected, block)
                 self.assertLess(block.index(expected), block.index("- name: Install Niro"))
                 self.assertNotIn("repository: ${{ github.repository }}", block)
+                install_step = block[block.index(expected) : block.index("- name: Install Niro")]
+                self.assertNotIn("with:", install_step)
 
     def test_action_auto_detects_repository_without_a_repository_input(self) -> None:
         action = ACTION.read_text(encoding="utf-8")
         self.assertNotRegex(action, r"(?m)^  repository:")
         self.assertNotIn("inputs.repository", action)
+        self.assertNotRegex(action, r"(?m)^  (replace|if-missing):")
+        self.assertNotIn("inputs.replace", action)
+        self.assertNotIn("inputs.if-missing", action)
 
     def test_action_is_pinned_to_an_immutable_commit(self) -> None:
         references = re.findall(
