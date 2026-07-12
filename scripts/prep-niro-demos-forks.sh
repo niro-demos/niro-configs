@@ -148,7 +148,7 @@ jobs:
         id: niro-configs-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.NIRO_APP_CLIENT_ID }}
+          client-id: ${{ secrets.NIRO_APP_CLIENT_ID }}
           private-key: ${{ secrets.NIRO_APP_PRIVATE_KEY }}
           owner: niro-demos
           repositories: niro-configs
@@ -259,7 +259,7 @@ jobs:
         id: niro-configs-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.NIRO_APP_CLIENT_ID }}
+          client-id: ${{ secrets.NIRO_APP_CLIENT_ID }}
           private-key: ${{ secrets.NIRO_APP_PRIVATE_KEY }}
           owner: niro-demos
           repositories: niro-configs
