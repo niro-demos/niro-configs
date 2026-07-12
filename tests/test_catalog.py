@@ -225,6 +225,52 @@ class CatalogTests(unittest.TestCase):
             self.assertFalse((config / "findings").exists())
             self.assertFalse((config / "credentials.yaml").exists())
 
+    def test_import_replace_replaces_the_complete_niro_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = self.make_config(root)
+            stale = config / "niro" / "harness" / "stale.sh"
+            stale.write_text("#!/bin/sh\n", encoding="utf-8")
+
+            archive_path = root / "replacement.tar"
+            with tarfile.open(archive_path, "w") as archive:
+                for name, content in (
+                    ("niro/niro.yaml", b"version: 1\n"),
+                    ("niro/scope.yaml", b"targets: []\n"),
+                    ("niro/harness/start.sh", b"#!/bin/sh\n# replacement\n"),
+                ):
+                    info = tarfile.TarInfo(name)
+                    info.size = len(content)
+                    archive.addfile(info, io.BytesIO(content))
+
+            result = self.run_catalog(
+                root,
+                "import",
+                "--repository",
+                "niro-demos/example",
+                "--niro-dir",
+                "niro",
+                "--archive",
+                str(archive_path),
+                "--upstream",
+                "example/example",
+                "--upstream-sha",
+                "a" * 40,
+                "--niro-version",
+                "v1.2.3",
+                "--source-run",
+                "https://github.com/niro-demos/example/actions/runs/2",
+                "--source-run-conclusion",
+                "success",
+                "--replace",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(stale.exists())
+            self.assertIn(
+                "# replacement",
+                (config / "niro" / "harness" / "start.sh").read_text(encoding="utf-8"),
+            )
+
     def test_import_rejects_archive_symlinks_and_traversal(self) -> None:
         for name, member_type in (("../escape", tarfile.REGTYPE), ("niro/link", tarfile.SYMTYPE)):
             with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
@@ -297,100 +343,6 @@ class CatalogTests(unittest.TestCase):
             self.assertFalse((config / "niro-staging" / "scope.yaml").exists())
             self.assertIn("niro_dir: niro-staging", (config / "metadata.yaml").read_text())
             self.assertIn("installable: false", (config / "metadata.yaml").read_text())
-
-    def test_replace_requires_acceptance_registers_to_remain_append_only(self) -> None:
-        for register, key in (
-            ("accepted-behaviors.yaml", "accepted_behaviors"),
-            ("accepted-coverage-gaps.yaml", "accepted_coverage_gaps"),
-        ):
-            with self.subTest(register=register), tempfile.TemporaryDirectory() as temporary:
-                root = Path(temporary)
-                config = self.make_config(root)
-                original = f'{key}:\n  - reason: "reviewed and retained"\n'
-                (config / "niro" / register).write_text(original, encoding="utf-8")
-
-                archive_path = root / "replacement.tar"
-                with tarfile.open(archive_path, "w") as archive:
-                    for name, content in (
-                        ("niro/niro.yaml", b"version: 1\n"),
-                        ("niro/scope.yaml", b"targets: []\n"),
-                        (f"niro/{register}", f"{key}: []\n".encode()),
-                    ):
-                        info = tarfile.TarInfo(name)
-                        info.size = len(content)
-                        archive.addfile(info, io.BytesIO(content))
-
-                result = self.run_catalog(
-                    root,
-                    "import",
-                    "--repository",
-                    "niro-demos/example",
-                    "--niro-dir",
-                    "niro",
-                    "--archive",
-                    str(archive_path),
-                    "--upstream",
-                    "example/example",
-                    "--upstream-sha",
-                    "a" * 40,
-                    "--niro-version",
-                    "v1.2.3",
-                    "--source-run",
-                    "https://github.com/niro-demos/example/actions/runs/2",
-                    "--source-run-conclusion",
-                    "success",
-                    "--replace",
-                )
-                self.assertNotEqual(result.returncode, 0)
-                self.assertIn("append-only", result.stderr)
-                self.assertEqual(
-                    (config / "niro" / register).read_text(encoding="utf-8"), original
-                )
-
-    def test_replace_allows_appending_to_acceptance_registers(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            config = self.make_config(root)
-            register = config / "niro" / "accepted-behaviors.yaml"
-            original = 'accepted_behaviors:\n  - reason: "retained"\n'
-            appended = original + '  - reason: "new"\n'
-            register.write_text(original, encoding="utf-8")
-
-            archive_path = root / "replacement.tar"
-            with tarfile.open(archive_path, "w") as archive:
-                for name, content in (
-                    ("niro/niro.yaml", b"version: 1\n"),
-                    ("niro/scope.yaml", b"targets: []\n"),
-                    ("niro/accepted-behaviors.yaml", appended.encode()),
-                ):
-                    info = tarfile.TarInfo(name)
-                    info.size = len(content)
-                    archive.addfile(info, io.BytesIO(content))
-
-            result = self.run_catalog(
-                root,
-                "import",
-                "--repository",
-                "niro-demos/example",
-                "--niro-dir",
-                "niro",
-                "--archive",
-                str(archive_path),
-                "--upstream",
-                "example/example",
-                "--upstream-sha",
-                "a" * 40,
-                "--niro-version",
-                "v1.2.3",
-                "--source-run",
-                "https://github.com/niro-demos/example/actions/runs/2",
-                "--source-run-conclusion",
-                "success",
-                "--replace",
-            )
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(register.read_text(encoding="utf-8"), appended)
-
 
 if __name__ == "__main__":
     unittest.main()

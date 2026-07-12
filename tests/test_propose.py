@@ -86,6 +86,10 @@ class ProposeTests(unittest.TestCase):
         source = PROPOSER.read_text(encoding="utf-8")
         self.assertIn('"pr", "create", "--draft"', source)
 
+    def test_proposer_replaces_existing_catalog_entry(self) -> None:
+        source = PROPOSER.read_text(encoding="utf-8")
+        self.assertIn('import_arguments.append("--replace")', source)
+
 
 if __name__ == "__main__":
     unittest.main()

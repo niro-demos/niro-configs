@@ -278,7 +278,7 @@ def main() -> int:
                     "",
                     "The knowledge artifact was imported through the catalog sanitizer. "
                     "Findings, logs, runtime state, and real credentials were excluded; "
-                    "append-only acceptance registers were preserved; catalog validation passed.",
+                    "the complete saved Niro directory was replaced; catalog validation passed.",
                     "",
                 ]
             ),
