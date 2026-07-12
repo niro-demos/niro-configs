@@ -1,0 +1,8 @@
+# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
+#
+# This file is shared and append-only. Preserve all existing entries and append
+# only specific, structurally untestable surfaces.
+
+accepted_coverage_gaps:
+  - gap: "Modern facade, JSP module, PHP module, LLMForge, and captured-email UI surfaces"
+    reason: "Their Compose services are published external images rather than builds from this checkout. The Niro-owned runtime therefore serves the current-checkout Spring Boot application and legacy UI only; using those images would violate the working-tree runtime requirement."

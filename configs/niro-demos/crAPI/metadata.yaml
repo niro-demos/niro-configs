@@ -1,0 +1,10 @@
+repository: niro-demos/crAPI
+niro_dir: niro
+upstream: OWASP/crAPI
+upstream_sha: 73d309cc8f28bbdeed31dbb35f05dba8354de3c9
+niro_version: 0.1.51
+installable: true
+validated_at: 2026-07-12
+source_run: https://github.com/niro-demos/crAPI/actions/runs/29200140056
+source_run_conclusion: failure
+source_run_note: Claude session limit after reusable configuration, pentest, and finding verification completed
