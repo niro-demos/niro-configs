@@ -63,7 +63,8 @@ class PrepWorkflowTests(unittest.TestCase):
                 self.assertNotIn("NIRO_CONFIGS_APP_PRIVATE_KEY", block)
 
                 token_step = block[token_at:propose_at]
-                self.assertIn("app-id: ${{ secrets.NIRO_APP_CLIENT_ID }}", token_step)
+                self.assertIn("client-id: ${{ secrets.NIRO_APP_CLIENT_ID }}", token_step)
+                self.assertNotIn("app-id:", token_step)
                 self.assertIn("private-key: ${{ secrets.NIRO_APP_PRIVATE_KEY }}", token_step)
 
                 proposal = block[propose_at:upload_at]
