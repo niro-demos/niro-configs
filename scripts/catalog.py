@@ -28,6 +28,10 @@ ROOT_FILES = {
     "niro.yaml",
     "scope.yaml",
 }
+APPEND_ONLY_FILES = {
+    "accepted-behaviors.yaml",
+    "accepted-coverage-gaps.yaml",
+}
 BANNED_DIRS = {
     ".git",
     "cache",
@@ -216,6 +220,20 @@ def write_metadata(path: Path, args: argparse.Namespace) -> None:
     )
 
 
+def validate_append_only_registers(existing_niro: Path, candidate_niro: Path) -> None:
+    for name in sorted(APPEND_ONLY_FILES):
+        existing = existing_niro / name
+        if not existing.is_file():
+            continue
+        candidate = candidate_niro / name
+        if not candidate.is_file():
+            raise CatalogError(f"{name} is append-only and cannot be removed")
+        existing_data = existing.read_bytes()
+        candidate_data = candidate.read_bytes()
+        if not candidate_data.startswith(existing_data):
+            raise CatalogError(f"{name} is append-only and existing content changed")
+
+
 def import_archive(root: Path, args: argparse.Namespace) -> None:
     checked_repository(args.repository)
     checked_repository(args.upstream)
@@ -262,6 +280,12 @@ def import_archive(root: Path, args: argparse.Namespace) -> None:
 
         write_metadata(staged / "metadata.yaml", args)
         validate_repository(temp_root, args.repository)
+
+        if target.exists():
+            existing_metadata = parse_metadata(target / "metadata.yaml")
+            if existing_metadata["niro_dir"] != args.niro_dir:
+                raise CatalogError("replace cannot change the configured Niro directory")
+            validate_append_only_registers(target / args.niro_dir, niro)
 
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists():
