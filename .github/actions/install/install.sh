@@ -7,6 +7,12 @@ workspace="${GITHUB_WORKSPACE:-$PWD}"
 repository="${NIRO_CONFIG_REPOSITORY:?repository input is required}"
 destination="${NIRO_CONFIG_DESTINATION:-niro}"
 replace="${NIRO_CONFIG_REPLACE:-false}"
+if_missing="${NIRO_CONFIG_IF_MISSING:-skip}"
+
+if [[ ! "$repository" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+  echo "error: repository must be owner/name" >&2
+  exit 2
+fi
 
 case "$destination" in
   ""|/*|*".."*)
@@ -30,11 +36,28 @@ case "$replace" in
     ;;
 esac
 
+case "$if_missing" in
+  skip|error) ;;
+  *)
+    echo "error: if-missing must be 'skip' or 'error'" >&2
+    exit 2
+    ;;
+esac
+
+source_dir="$root/configs/$repository/niro"
+if [ ! -d "$source_dir" ]; then
+  if [ "$if_missing" = "skip" ]; then
+    echo "No approved Niro configuration for $repository; Niro will initialize it"
+    exit 0
+  fi
+  echo "error: no approved Niro configuration for $repository" >&2
+  exit 1
+fi
+
 python3 "$root/scripts/catalog.py" validate \
   --root "$root" \
   --repository "$repository"
 
-source_dir="$root/configs/$repository/niro"
 target="$workspace/$destination"
 
 if [ -L "$target" ]; then

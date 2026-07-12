@@ -13,6 +13,10 @@ inputs:
     description: Replace an existing destination when set to true
     required: false
     default: "false"
+  if-missing:
+    description: Use skip to let Niro initialize repositories not in the catalog
+    required: false
+    default: skip
 
 runs:
   using: composite
@@ -23,4 +27,5 @@ runs:
         NIRO_CONFIG_REPOSITORY: ${{ inputs.repository }}
         NIRO_CONFIG_DESTINATION: ${{ inputs.destination }}
         NIRO_CONFIG_REPLACE: ${{ inputs.replace }}
+        NIRO_CONFIG_IF_MISSING: ${{ inputs.if-missing }}
       run: "$GITHUB_ACTION_PATH/install.sh"

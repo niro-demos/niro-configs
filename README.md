@@ -57,3 +57,15 @@ python3 scripts/catalog.py import \
 ```
 
 Then inspect the diff, run `python3 scripts/catalog.py validate`, and open a PR.
+
+## Prepare demo repositories
+
+Demo-fleet workflow ownership also lives here:
+
+```bash
+scripts/prep-niro-demos-forks.sh --apply --only=workflows gitea casdoor
+```
+
+The generated workflows use the immutable installer commit above. Repositories
+without an approved entry are skipped and let Niro perform its normal first-run
+initialization.

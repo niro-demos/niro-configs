@@ -137,6 +137,23 @@ class CatalogTests(unittest.TestCase):
             self.assertIn("destination must be", result.stderr)
             self.assertTrue(marker.is_file())
 
+    def test_installer_skips_a_repository_without_an_approved_config_by_default(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            environment = {
+                **os.environ,
+                "GITHUB_WORKSPACE": temporary,
+                "NIRO_CONFIG_REPOSITORY": "niro-demos/not-saved-yet",
+                "NIRO_CONFIG_DESTINATION": "niro",
+                "NIRO_CONFIG_REPLACE": "false",
+                "NIRO_CONFIG_IF_MISSING": "skip",
+            }
+            result = subprocess.run(
+                [str(INSTALLER)], env=environment, text=True, capture_output=True, check=False
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("No approved Niro configuration", result.stdout)
+            self.assertFalse((Path(temporary) / "niro").exists())
+
     def test_import_keeps_config_and_harness_but_drops_findings(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
