@@ -142,7 +142,7 @@ jobs:
           COPILOT_PROVIDER_BASE_URL: https://openrouter.ai/api/v1
           COPILOT_PROVIDER_TYPE: openai
           COPILOT_MODEL: z-ai/glm-5.2
-        run: niro find --agent=@@AGENT@@ --goal="Pentest this application" --config-dir=niro --include-findings=true --upload-debug-logs=true
+        run: niro find --autonomous --agent=@@AGENT@@ --goal="Pentest this application" --config-dir=niro --include-findings=true --upload-debug-logs=true
 
       - name: Create Niro config catalog token
         id: niro-configs-token
@@ -262,7 +262,7 @@ jobs:
           COPILOT_PROVIDER_BASE_URL: https://openrouter.ai/api/v1
           COPILOT_PROVIDER_TYPE: openai
           COPILOT_MODEL: z-ai/glm-5.2
-        run: niro fix --agent=@@AGENT@@ --goal="Pentest this application" --config-dir=niro --generate-report --include-findings=true --upload-debug-logs=true
+        run: niro fix --autonomous --agent=@@AGENT@@ --goal="Pentest this application" --config-dir=niro --generate-report --include-findings=true --upload-debug-logs=true
 
       - name: Create Niro config catalog token
         id: niro-configs-token
