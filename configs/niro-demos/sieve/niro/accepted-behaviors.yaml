@@ -1,0 +1,10 @@
+# accepted-behaviors.yaml — a risk-acceptance register.
+#
+# Every entry is treated as accepted until a human deletes it. The tool writes
+# the consequence and evidence; the human may separately document a reason.
+
+accepted_behaviors:
+  - consequence: "If this service is exposed beyond its documented local/CI-only environment without a TLS-terminating proxy, an on-path observer can capture login passwords and bearer tokens sent over plaintext HTTP."
+    evidence: "README.md:3-4 and README.md:15-16 explicitly prohibit Internet exposure and document the supported listener as http://localhost:5000."
+  - consequence: "Any authenticated user can read another user's account email address and balance by changing the account ID in the request path."
+    evidence: "app.py:42-47 documents and implements a valid bearer token as the only access requirement for GET /accounts/<id>; README.md:26 likewise describes the endpoint as requiring a bearer token without an ownership restriction."

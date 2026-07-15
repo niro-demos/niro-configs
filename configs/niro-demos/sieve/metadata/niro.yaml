@@ -1,0 +1,9 @@
+repository: niro-demos/sieve
+niro_dir: niro
+upstream: niro-demos/sieve
+upstream_sha: e0c8856ac44b7b9efcb009d7c801e841d8851ec0
+niro_version: 0.1.58
+installable: true
+validated_at: 2026-07-15
+source_run: https://github.com/niro-demos/sieve/actions/runs/29389784523
+source_run_conclusion: success
