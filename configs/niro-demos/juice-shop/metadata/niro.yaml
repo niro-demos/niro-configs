@@ -1,0 +1,9 @@
+repository: niro-demos/juice-shop
+niro_dir: niro
+upstream: juice-shop/juice-shop
+upstream_sha: 39f6f9221c920d14cbf729b7b82a5b6873366adc
+niro_version: 0.1.58
+installable: true
+validated_at: 2026-07-15
+source_run: https://github.com/niro-demos/juice-shop/actions/runs/29390119540
+source_run_conclusion: success
