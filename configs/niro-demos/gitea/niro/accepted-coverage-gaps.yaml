@@ -1,8 +1,0 @@
-# accepted-coverage-gaps.yaml — append-only record of surfaces structurally unavailable in this harness.
-accepted_coverage_gaps:
-  - gap: "External identity-provider authentication (OAuth2/OpenID Connect, LDAP, PAM, and SSPI)"
-    reason: "The isolated CI runtime has no external identity provider credentials or infrastructure. Native password/session and API authentication remain testable, but provider callbacks and provider-side enforcement cannot be exercised live."
-  - gap: "Outbound email delivery and inbound email-driven workflows"
-    reason: "The isolated runtime intentionally has no SMTP or inbound mail service. Web password-reset and notification request handling can be probed, but delivery, link consumption from a mailbox, and reply-by-email processing cannot be exercised end to end."
-  - gap: "Object storage, external database, and external search backends"
-    reason: "The deterministic CI harness uses local filesystem storage, SQLite, and built-in indexing and has no credentials or services for S3-compatible storage, MySQL/PostgreSQL/MSSQL, Elasticsearch, or Meilisearch. Backend-specific integration behavior is not live-tested."

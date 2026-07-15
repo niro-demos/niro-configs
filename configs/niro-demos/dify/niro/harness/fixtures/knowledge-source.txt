@@ -1,8 +1,0 @@
-Dify Niro pentest knowledge base fixture.
-
-This document is seeded by niro/harness/seed.sh into a dedicated test
-dataset so the Niro pentest sweep has real, indexed knowledge-base content
-to exercise (document CRUD, segment retrieval, dataset permission checks,
-and cross-tenant/cross-user isolation of dataset contents).
-
-Marker: niro-fixture-marker-alpha

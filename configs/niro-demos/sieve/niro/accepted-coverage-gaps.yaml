@@ -1,5 +1,0 @@
-# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
-# This shared register is append-only: preserve existing entries and append only
-# genuinely untestable, setup-specific gaps.
-
-accepted_coverage_gaps: []
