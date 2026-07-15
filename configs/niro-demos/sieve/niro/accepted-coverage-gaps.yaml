@@ -1,0 +1,6 @@
+# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
+#
+# This register is append-only. Keep every existing entry and append only
+# genuinely untestable surfaces with a specific environmental reason.
+
+accepted_coverage_gaps: []
