@@ -1,6 +1,0 @@
-# accepted-coverage-gaps.yaml — append-only register of surfaces unavailable in this runtime.
-accepted_coverage_gaps:
-  - gap: "External identity, notification, payment, storage, and directory provider callbacks"
-    reason: "The checkout-owned CI runtime has no third-party provider credentials or external infrastructure; only Casdoor's local password, session, OAuth/OIDC, administration, and data APIs can be exercised live."
-  - gap: "TLS-only and secure-cookie transport behavior"
-    reason: "The authorized checkout runtime is an HTTP-only localhost service and no local TLS termination is configured."

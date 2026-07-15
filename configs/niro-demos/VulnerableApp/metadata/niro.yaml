@@ -1,9 +1,0 @@
-repository: niro-demos/VulnerableApp
-niro_dir: niro
-upstream: SasanLabs/VulnerableApp
-upstream_sha: c715c77389b35ed5eecca099c540fdaa0ea7db20
-niro_version: 0.1.51
-installable: true
-validated_at: 2026-07-12
-source_run: https://github.com/niro-demos/VulnerableApp/actions/runs/29200140565
-source_run_conclusion: success
