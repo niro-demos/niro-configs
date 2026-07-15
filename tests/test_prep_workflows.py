@@ -33,10 +33,30 @@ class PrepWorkflowTests(unittest.TestCase):
                 self.assertIn("--include-findings=true", block)
                 self.assertIn("--upload-debug-logs=true", block)
 
-    def test_find_and_fix_generate_reports(self) -> None:
+    def test_only_fix_explicitly_generates_reports(self) -> None:
+        self.assertNotIn("--generate-report", self.template("find_template"))
+        self.assertIn("--generate-report", self.template("fix_template"))
+
+    def test_find_and_fix_upload_generated_reports(self) -> None:
         for name in ("find_template", "fix_template"):
             with self.subTest(template=name):
-                self.assertIn("--generate-report", self.template(name))
+                block = self.template(name)
+                run_at = block.index("- name: Run Niro")
+                report_at = block.index("- name: Upload Niro penetration-test report")
+                debug_at = block.index("- name: Upload debug logs")
+                self.assertLess(run_at, report_at)
+                self.assertLess(report_at, debug_at)
+
+                report_step = block[report_at:debug_at]
+                for expected in (
+                    "if: always()",
+                    "uses: actions/upload-artifact@v7",
+                    "name: niro-pentest-report",
+                    "path: ${{ runner.temp }}/niro-reports/**/penetration-test-report-*.pdf",
+                    "if-no-files-found: ignore",
+                    "retention-days: 30",
+                ):
+                    self.assertIn(expected, report_step)
 
     def test_find_and_fix_install_approved_config_before_niro(self) -> None:
         expected = f"uses: {INSTALL_ACTION}"

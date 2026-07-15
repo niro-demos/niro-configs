@@ -142,7 +142,7 @@ jobs:
           COPILOT_PROVIDER_BASE_URL: https://openrouter.ai/api/v1
           COPILOT_PROVIDER_TYPE: openai
           COPILOT_MODEL: z-ai/glm-5.2
-        run: niro find --agent=@@AGENT@@ --goal="Pentest this application" --config-dir=niro --generate-report --include-findings=true --upload-debug-logs=true
+        run: niro find --agent=@@AGENT@@ --goal="Pentest this application" --config-dir=niro --include-findings=true --upload-debug-logs=true
 
       - name: Create Niro config catalog token
         id: niro-configs-token
@@ -170,6 +170,15 @@ jobs:
         with:
           name: niro-knowledge
           path: niro-knowledge.tar
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload Niro penetration-test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: niro-pentest-report
+          path: ${{ runner.temp }}/niro-reports/**/penetration-test-report-*.pdf
           if-no-files-found: ignore
           retention-days: 30
 
@@ -281,6 +290,15 @@ jobs:
         with:
           name: niro-knowledge
           path: niro-knowledge.tar
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload Niro penetration-test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: niro-pentest-report
+          path: ${{ runner.temp }}/niro-reports/**/penetration-test-report-*.pdf
           if-no-files-found: ignore
           retention-days: 30
 
