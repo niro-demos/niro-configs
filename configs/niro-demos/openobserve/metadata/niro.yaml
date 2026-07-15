@@ -1,0 +1,9 @@
+repository: niro-demos/openobserve
+niro_dir: niro
+upstream: openobserve/openobserve
+upstream_sha: 180365e3f34a44c9b7d6abd7eb131727613f0ea2
+niro_version: 0.1.58
+installable: true
+validated_at: 2026-07-15
+source_run: https://github.com/niro-demos/openobserve/actions/runs/29390020784
+source_run_conclusion: success

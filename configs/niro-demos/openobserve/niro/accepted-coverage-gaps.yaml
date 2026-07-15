@@ -1,0 +1,7 @@
+# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
+# This register is append-only. Keep existing entries and append only specific,
+# structurally untestable surfaces.
+
+accepted_coverage_gaps:
+  - gap: "Vertical authorization boundaries for member and viewer roles"
+    reason: "This checkout is the community build; its create-user handler unconditionally coerces new users to the admin base role under cfg(not(feature = 'enterprise')). A lower-privilege actor cannot be seeded without an enterprise build/license, so member/viewer-versus-admin tests cannot be exercised live."
