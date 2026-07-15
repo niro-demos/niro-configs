@@ -33,6 +33,11 @@ class PrepWorkflowTests(unittest.TestCase):
                 self.assertIn("--include-findings=true", block)
                 self.assertIn("--upload-debug-logs=true", block)
 
+    def test_find_and_fix_generate_reports(self) -> None:
+        for name in ("find_template", "fix_template"):
+            with self.subTest(template=name):
+                self.assertIn("--generate-report", self.template(name))
+
     def test_find_and_fix_install_approved_config_before_niro(self) -> None:
         expected = f"uses: {INSTALL_ACTION}"
         for name in ("find_template", "fix_template"):
