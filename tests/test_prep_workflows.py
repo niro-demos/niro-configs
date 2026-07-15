@@ -100,6 +100,16 @@ class PrepWorkflowTests(unittest.TestCase):
     def test_success_does_not_inherit_false_trailing_and_status(self) -> None:
         self.assertNotIn('[ "$fail" -gt 0 ] && exit 1', self.script)
 
+    def test_workflow_rollout_checks_out_only_workflows(self) -> None:
+        self.assertIn("--filter=blob:none --no-checkout", self.script)
+        self.assertIn('"https://github.com/$repo.git"', self.script)
+        self.assertNotIn('gh repo clone "$repo"', self.script)
+        sparse_at = self.script.index("git sparse-checkout set .github/workflows")
+        checkout_at = self.script.index("git checkout -q")
+        replace_at = self.script.index("rm -rf .github/workflows")
+        self.assertLess(sparse_at, checkout_at)
+        self.assertLess(checkout_at, replace_at)
+
 
 if __name__ == "__main__":
     unittest.main()

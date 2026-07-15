@@ -405,12 +405,16 @@ for repo in "${REPOS[@]}"; do
 
     if [ "$DO_APPLY" -eq 1 ]; then
       tmp=$(mktemp -d)
-      if ! gh repo clone "$repo" "$tmp/r" -- --depth 1 --filter=blob:none --quiet 2>/dev/null; then
+      # Clone directly: `gh repo clone` detects forks and fetches their often
+      # enormous upstream repository even when the checkout is sparse.
+      if ! git clone --depth 1 --filter=blob:none --no-checkout --quiet "https://github.com/$repo.git" "$tmp/r" 2>/dev/null; then
         echo "  -> clone FAILED"; fail=$((fail+1)); rm -rf "$tmp"; echo; continue
       fi
       if (
         cd "$tmp/r"
         def=$(git symbolic-ref --short HEAD)
+        git sparse-checkout set .github/workflows
+        git checkout -q
         git checkout -q -b "$BRANCH"
         rm -rf .github/workflows
         mkdir -p .github/workflows
