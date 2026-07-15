@@ -1,0 +1,9 @@
+# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
+#
+# This register is append-only. Entries identify surfaces that are structurally
+# unavailable in this local harness; remove an entry only when that surface is
+# made testable in a later, reviewed change.
+
+accepted_coverage_gaps:
+  - gap: "Enterprise integrations requiring external identity providers or third-party services"
+    reason: "The checkout can run the local Mattermost server and database, but this CI environment has no customer LDAP/SAML/OIDC provider, external search cluster, SMTP inbox, Calls media infrastructure, or third-party integration credentials. Those external end-to-end paths cannot be exercised without widening scope beyond the harness-owned localhost target."
