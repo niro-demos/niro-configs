@@ -1,0 +1,9 @@
+repository: niro-demos/DVWA
+niro_dir: niro
+upstream: digininja/DVWA
+upstream_sha: 88c9c1b5c8707527a589124834cef504b1aa7ef0
+niro_version: 0.1.59
+installable: true
+validated_at: 2026-07-15
+source_run: https://github.com/niro-demos/DVWA/actions/runs/29449307783
+source_run_conclusion: success
