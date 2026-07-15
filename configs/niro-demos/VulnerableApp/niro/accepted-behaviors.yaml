@@ -1,0 +1,17 @@
+# accepted-behaviors.yaml — a risk-acceptance register.
+#
+# Every entry is a behavior treated as ACCEPTED: as long as an entry exists, the
+# tool considers that behavior intended and does not re-report it. To stop
+# accepting one, delete it — the finding comes back. Version control records who
+# changed what, and when.
+#
+# `consequence` and `evidence` are tool-authored. `reason` belongs to the human
+# owner and must never be added or changed by the tool. This file is append-only.
+
+accepted_behaviors:
+  - consequence: "Anyone who can reach the cache-poisoning demo can repeatedly evict a shared cache level, forcing cache misses for other users until the cache is repopulated."
+    evidence: "src/main/resources/static/templates/CachePoisoning/Common/CachePoisoningCommon.js:34-41 deliberately invokes the public clearCache POST from the demo UI without credentials; src/test/java/org/sasanlabs/service/vulnerability/cachePoisoning/CachePoisoningVulnerabilityTest.java:158-187 asserts that this request evicts LEVEL_1 and restores the default response."
+  - consequence: "Any unauthenticated visitor can read the session-management demo account's reusable username and password from a public page and use them to sign in as that account."
+    evidence: "src/main/resources/static/templates/SessionManagementVulnerability/Common/SessionManagement.html:10-14 deliberately pre-fills session_user/password123 in the public login form; src/main/resources/scripts/SessionManagement/db/data.sql:1 seeds that exact reusable credential; src/test/java/org/sasanlabs/service/vulnerability/sessionManagement/SessionManagementServiceTest.java:21-22 and 34-40 deliberately configure successful authentication with the same pair."
+  - consequence: "When the unsafe profile is deployed with working mail delivery, any unauthenticated caller can make the application send caller-chosen test-email content to an arbitrary recipient."
+    evidence: "docs/EmailFlowTesting.md:5 and 9-17 documents the endpoint, caller-supplied recipient, subject, and body for mail-flow validation, and line 48 states it is intended for local validation and debugging; src/main/java/org/sasanlabs/controller/EmailTestController.java:14 and 28-39 limits the controller to the unsafe profile and deliberately forwards those parameters; src/test/java/org/sasanlabs/controller/EmailTestControllerTest.java:22-34 deliberately asserts the caller-supplied values are sent and produce HTTP 200."
