@@ -1,0 +1,6 @@
+# accepted-coverage-gaps.yaml — append-only register of structurally untestable surfaces.
+accepted_coverage_gaps:
+  - gap: "Modern facade UI and its JSP/PHP companion services"
+    reason: "Those services live in separate repositories and the checkout's Compose definitions consume published images rather than current working-tree source. The current checkout can reproducibly serve only the Spring Boot legacy UI and REST API without violating the requirement to test current checkout code."
+  - gap: "Outbound email delivery and Mailpit inbox inspection"
+    reason: "The Spring Boot checkout configures an SMTP host named mailpit, but Mailpit is not source in this checkout. Email-triggering routes are reachable, but end-to-end SMTP delivery and inbox behavior cannot be exercised from the current-checkout-only runtime."

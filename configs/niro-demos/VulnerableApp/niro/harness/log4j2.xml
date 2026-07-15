@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+  <Appenders>
+    <Console name="Console" target="SYSTEM_OUT">
+      <PatternLayout pattern="%d{ISO8601} %-5level [%t] %logger - %msg%n"/>
+    </Console>
+    <File name="HarnessEvidence" fileName="/niro-logs/application.log" append="true" immediateFlush="true">
+      <PatternLayout pattern="%d{ISO8601} %-5level [%t] %logger - %msg%n"/>
+    </File>
+  </Appenders>
+  <Loggers>
+    <Root level="info">
+      <AppenderRef ref="Console"/>
+      <AppenderRef ref="HarnessEvidence"/>
+    </Root>
+  </Loggers>
+</Configuration>
