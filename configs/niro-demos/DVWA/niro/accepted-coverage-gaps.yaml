@@ -1,0 +1,9 @@
+# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
+#
+# Entries are append-only. Each gap identifies a specific surface that is
+# structurally untestable in this environment and the reason it cannot be
+# exercised here.
+
+accepted_coverage_gaps:
+  - gap: "Live reCAPTCHA-protected challenge behavior"
+    reason: "The checkout-local runtime has no Google reCAPTCHA site/secret key and the setup check confirms the integration is unavailable; exercising the external provider would require credentials and third-party infrastructure outside this isolated CI target."

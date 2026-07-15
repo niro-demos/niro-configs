@@ -1,0 +1,40 @@
+services:
+  dvwa:
+    build:
+      context: ../..
+    image: niro-dvwa-working-tree:local
+    pull_policy: build
+    environment:
+      DB_SERVER: db
+      DEFAULT_SECURITY_LEVEL: low
+    volumes:
+      - ./apache-auth.conf:/etc/apache2/conf-enabled/zz-niro-auth.conf:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - dvwa
+    ports:
+      # Niro maps the target's 127.0.0.1 to the native-Linux Docker host
+      # gateway, so the published socket must accept traffic beyond lo.
+      - "4280:80"
+
+  db:
+    image: docker.io/library/mariadb:10
+    environment:
+      MYSQL_ROOT_PASSWORD: dvwa
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: p@ssw0rd
+    volumes:
+      - ./run/db:/var/lib/mysql
+    networks:
+      - dvwa
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+networks:
+  dvwa: {}
