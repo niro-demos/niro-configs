@@ -38,6 +38,27 @@ class PrepWorkflowTests(unittest.TestCase):
             with self.subTest(template=name):
                 self.assertIn("--generate-report", self.template(name))
 
+    def test_find_and_fix_upload_generated_reports(self) -> None:
+        for name in ("find_template", "fix_template"):
+            with self.subTest(template=name):
+                block = self.template(name)
+                run_at = block.index("- name: Run Niro")
+                report_at = block.index("- name: Upload Niro penetration-test report")
+                debug_at = block.index("- name: Upload debug logs")
+                self.assertLess(run_at, report_at)
+                self.assertLess(report_at, debug_at)
+
+                report_step = block[report_at:debug_at]
+                for expected in (
+                    "if: always()",
+                    "uses: actions/upload-artifact@v7",
+                    "name: niro-pentest-report",
+                    "path: ${{ runner.temp }}/niro-reports/**/penetration-test-report-*.pdf",
+                    "if-no-files-found: ignore",
+                    "retention-days: 30",
+                ):
+                    self.assertIn(expected, report_step)
+
     def test_find_and_fix_install_approved_config_before_niro(self) -> None:
         expected = f"uses: {INSTALL_ACTION}"
         for name in ("find_template", "fix_template"):

@@ -173,6 +173,15 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+      - name: Upload Niro penetration-test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: niro-pentest-report
+          path: ${{ runner.temp }}/niro-reports/**/penetration-test-report-*.pdf
+          if-no-files-found: ignore
+          retention-days: 30
+
       # Uploads only when the run wrote the tar — enabled explicitly above.
       - name: Upload debug logs
         if: always()
@@ -281,6 +290,15 @@ jobs:
         with:
           name: niro-knowledge
           path: niro-knowledge.tar
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload Niro penetration-test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: niro-pentest-report
+          path: ${{ runner.temp }}/niro-reports/**/penetration-test-report-*.pdf
           if-no-files-found: ignore
           retention-days: 30
 
