@@ -1,0 +1,34 @@
+# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
+#
+# Every entry is a coverage gap treated as ACCEPTED: as long as an entry exists,
+# the tool will not re-report that gap on every run. To stop accepting one (it
+# became testable — you added the credential, enabled the flag, wired the
+# service), delete it. Version control records who changed what, and when.
+#
+#   gap:     what cannot be exercised here — the specific surface or capability
+#            left untested. (max 1000 runes)
+#   reason:  why it is structurally untestable in THIS setup — prod-only behavior,
+#            external infra/secrets you don't have, a licensed build you can't
+#            produce. Be specific enough that a reviewer can challenge it.
+#
+# Only genuinely unfixable gaps belong here. A gap you could close by adding a
+# fixture, credential, or flag is work to do — not a gap to accept. Broad entries
+# hide real blind spots.
+#
+# This file accumulates across runs and is APPEND-ONLY. Anyone updating it — tool
+# or human — must read it first, keep every existing entry, and only append;
+# never rewrite, reorder, or drop entries. There is no generator for it (it is
+# authored judgment, not derived data), so a clobbered entry is gone for good.
+# COMMIT it to git — that is your history, your review trail, and your undo.
+
+accepted_coverage_gaps:
+  - gap: "Email-delivered flows: password-reset emails, signup email-verification codes, and invitation emails."
+    reason: "No SMTP/email provider is configured in this harness (niro/harness/start.sh boots with no emailProvider wired and init_data.seed.json seeds no email Provider record). Casdoor's forgot-password and email-verification-code paths call out to a real email provider; without one, Niro cannot receive the code and drive the flow to completion. Provider config lives in object/provider.go / the Provider table."
+  - gap: "SMS-delivered verification codes (phone-based signup/login/reset)."
+    reason: "No SMS provider (e.g. Twilio, Aliyun) is configured in this harness for the same reason as email above — init_data.seed.json seeds no SMS Provider record, so codes are never actually sent anywhere Niro can read them."
+  - gap: "Third-party/enterprise identity provider login (GitHub, Google, WeCom, DingTalk, SAML/OIDC upstream IdPs, etc.)."
+    reason: "These require real client_id/client_secret pairs issued by the external provider, which this harness does not have and cannot fabricate. app-built-in and app-acme are seeded with only the Password/local-account and Verification-code sign-in methods enabled."
+  - gap: "LDAPS certificate-chain / hostname-validation edge cases beyond a basic TLS handshake."
+    reason: "niro/harness/start.sh wires ldapsCertId to the auto-generated built-in self-signed cert (admin/cert-built-in) purely to get the LDAPS listener (port 1636, mapped from the app's default 636) open for testing the LDAP protocol surface itself. It is a harness-generated self-signed cert, not representative of a real deployment's CA chain, so cert-validation-specific scenarios are out of scope here."
+  - gap: "MySQL/PostgreSQL-dialect-specific behavior (including any dialect-dependent SQL-injection surface)."
+    reason: "This harness runs Casdoor against its built-in sqlite driver (modernc.org/sqlite, already in go.mod; same driver the project's own ALLINONE Docker image defaults to) instead of the docker-compose.yml-documented MySQL 8, to keep start/reset fast and dependency-free in this sandbox (no image pull, no second service, no root DB password). Almost all app logic goes through the driver-agnostic xorm ORM, but any behavior that is genuinely specific to MySQL's or Postgres's SQL dialect (as opposed to sqlite's) is not exercised by this harness."
