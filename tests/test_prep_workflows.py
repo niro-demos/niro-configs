@@ -33,10 +33,9 @@ class PrepWorkflowTests(unittest.TestCase):
                 self.assertIn("--include-findings=true", block)
                 self.assertIn("--upload-debug-logs=true", block)
 
-    def test_find_and_fix_generate_reports(self) -> None:
-        for name in ("find_template", "fix_template"):
-            with self.subTest(template=name):
-                self.assertIn("--generate-report", self.template(name))
+    def test_only_fix_explicitly_generates_reports(self) -> None:
+        self.assertNotIn("--generate-report", self.template("find_template"))
+        self.assertIn("--generate-report", self.template("fix_template"))
 
     def test_find_and_fix_upload_generated_reports(self) -> None:
         for name in ("find_template", "fix_template"):
