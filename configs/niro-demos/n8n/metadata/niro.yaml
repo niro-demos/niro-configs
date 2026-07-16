@@ -1,0 +1,9 @@
+repository: niro-demos/n8n
+niro_dir: niro
+upstream: n8n-io/n8n
+upstream_sha: d3f4b19659546ecf1511874ed231047984c5491a
+niro_version: 0.1.61
+installable: true
+validated_at: 2026-07-16
+source_run: https://github.com/niro-demos/n8n/actions/runs/29514510715
+source_run_conclusion: success
