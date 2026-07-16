@@ -117,10 +117,14 @@ start_app() {
     cd "$REPO_ROOT"
     # NODE_ENV is intentionally left unset: Juice Shop's config loader
     # (node-config) only overlays a file named after NODE_ENV, and this repo
-    # ships no config/production.yml — leaving it unset uses config/default.yml
+    # ships no config/production.yml, so leaving it unset uses config/default.yml
     # as intended and avoids a spurious "did not match any deployment config"
     # warning.
-    PORT="$PORT" nohup node build/app.js >>"$LOG_FILE" 2>&1 &
+    if command -v setsid >/dev/null 2>&1; then
+      setsid env PORT="$PORT" node build/app.js </dev/null >>"$LOG_FILE" 2>&1 &
+    else
+      nohup env PORT="$PORT" node build/app.js </dev/null >>"$LOG_FILE" 2>&1 &
+    fi
     echo $! > "$PID_FILE"
   )
 

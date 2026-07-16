@@ -1,0 +1,28 @@
+# accepted-coverage-gaps.yaml - what cannot be tested in this setup, and why.
+#
+# Every entry is a coverage gap treated as ACCEPTED: as long as an entry exists,
+# the tool will not re-report that gap on every run. To stop accepting one (it
+# became testable - you added the credential, enabled the flag, wired the
+# service), delete it. Version control records who changed what, and when.
+#
+#   gap:     what cannot be exercised here - the specific surface or capability
+#            left untested. (max 1000 runes)
+#   reason:  why it is structurally untestable in THIS setup - prod-only behavior,
+#            external infra/secrets you don't have, a licensed build you can't
+#            produce. Be specific enough that a reviewer can challenge it.
+#
+# Only genuinely unfixable gaps belong here. A gap you could close by adding a
+# fixture, credential, or flag is work to do - not a gap to accept. Broad entries
+# hide real blind spots.
+#
+# This file accumulates across runs and is APPEND-ONLY. Anyone updating it - tool
+# or human - must read it first, keep every existing entry, and only append;
+# never rewrite, reorder, or drop entries. There is no generator for it (it is
+# authored judgment, not derived data), so a clobbered entry is gone for good.
+# COMMIT it to git - that is your history, your review trail, and your undo.
+
+accepted_coverage_gaps:
+  - gap: "Alchemy-backed Web3 challenge execution: Mint the Honey Pot and Wallet Depletion"
+    reason: "This checkout-local runtime has no ALCHEMY_API_KEY configured. lib/startup/validatePreconditions.ts marks ALCHEMY_API_KEY as required for these two Web3 challenges, and startup logged that both will not work as intended without it. No external Alchemy credential was supplied for this local harness."
+  - gap: "LLM-backed chatbot challenge execution: Chatbot Prompt Injection, Greedy Chatbot Manipulation, AI Debugging, and System Prompt Extraction"
+    reason: "This checkout-local runtime uses config/default.yml application.chatBot.llmApiUrl=http://localhost:11434/v1, but no local Ollama/OpenAI-compatible LLM service is reachable there. lib/startup/validatePreconditions.ts marks that LLM endpoint/model as required for these chatbot and AI challenges, and startup logged that the challenges will not work as intended without it."
