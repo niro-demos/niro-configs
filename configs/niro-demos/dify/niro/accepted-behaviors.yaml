@@ -1,0 +1,38 @@
+# accepted-behaviors.yaml — a risk-acceptance register.
+#
+# Every entry is a behavior treated as ACCEPTED: as long as an entry exists, the
+# tool considers that behavior intended and does not re-report it. To stop
+# accepting one, delete it — the finding comes back. Version control records who
+# changed what, and when.
+#
+#   consequence:  [tool] the precise risk, in plain terms a non-expert can
+#                 evaluate — what could actually happen. (max 1000 runes)
+#   evidence:     [tool] proof it looks intentional — comment / test / flag /
+#                 code, by file:line.
+#   reason:       [human] your team's rationale for accepting this — your own
+#                 documentation. The tool never writes it, and an entry is
+#                 accepted by being here, not by this field. But fill it in: an
+#                 undocumented acceptance no one can explain later is how real
+#                 risk quietly gets forgotten.
+#
+# Be specific enough to adjudicate in seconds. Vague entries hide real bugs.
+#
+# This file accumulates across runs and is APPEND-ONLY. Anyone updating it — tool
+# or human — must read it first, keep every existing entry (especially the human
+# `reason`), and only append; never rewrite, reorder, or drop entries. Presence
+# is the suppression signal, so a clobbered entry silently un-accepts a finding.
+# COMMIT it to git — that is your history, your review trail, and your undo.
+#
+# Create `accepted-behaviors.yaml` next to this file, carrying this header into
+# it so its rules travel with the data.
+
+accepted_behaviors:
+  # TC-FF5000A6 — Added by the tool — accepted, rationale not yet documented:
+  - consequence: "core/helper/ssrf_proxy.py's make_request has zero application-level IP/hostname filtering of its own: whenever the SSRF_PROXY_* env vars are unset it falls back to a plain, unrestricted httpx.Client, so any code path that reaches it (e.g. the unauthenticated-by-design web-app remote-file-upload endpoints) can make the API server fetch docker-internal hosts, loopback, and by the same code path RFC1918/link-local/metadata-style addresses, and return the response to the caller via a signed file-preview URL. This niro test harness (niro/harness/compose.yaml) does not deploy an ssrf_proxy container or set any SSRF_PROXY_* env var, so that unrestricted fallback is what gets exercised here."
+    evidence: "docker/docker-compose.yaml:674-694 deploys the `ssrf_proxy` (squid) container unconditionally for every default `docker compose up` (no `profiles:` gate, unlike `nginx`/`certbot`); docker/.env.example:207-208 sets SSRF_PROXY_HTTP_URL/SSRF_PROXY_HTTPS_URL=http://ssrf_proxy:3128 by default so the reference deployment routes every ssrf_proxy.make_request call through it; docker/ssrf_proxy/squid.conf.template:9-23,47 defines `acl to_private_networks` covering loopback (127.0.0.0/8), RFC1918 (10/8, 172.16/12, 192.168/16), CGN (100.64.0.0/10) and link-local (169.254.0.0/16, fe80::/10 — the cloud-metadata range) and applies `http_access deny to_private_networks` unconditionally unless an operator explicitly sets SSRF_PROXY_ALLOW_PRIVATE_IPS/_DOMAINS (docker/ssrf_proxy/docker-entrypoint.sh's write_optional_private_allowlist only adds allow-rules when those vars are non-empty); api/core/helper/ssrf_proxy.py:190-201 explicitly detects a Squid SSRF-block response (401/403 with a `squid` Server/Via header) and raises ToolSSRFError, confirming the code was written expecting this proxy layer to be the SSRF control, not treating it as accidental infra. Reproduced against `http://api:5001/...` and `http://127.0.0.1:5001/...` in this harness, which stands up no ssrf_proxy container/config at all."
+    reason: ""
+
+  # TC-D17AB7E0 — Added by the tool — accepted, rationale not yet documented:
+  - consequence: "Any normal (non-admin, non-owner) workspace member can upload and install arbitrary plugin packages into the workspace as soon as it is created, before an owner ever visits plugin permission settings. Installed plugins run in the plugin daemon with backend access to the workspace's model-provider credentials, tool credentials, and data."
+    evidence: "api/controllers/console/workspace/__init__.py:37-39 — code comment 'no permission set, allow access for everyone' on the no-row branch of plugin_permission_required(); api/tests/test_containers_integration_tests/controllers/console/workspace/test_workspace_wraps.py:48-61 (test_allows_without_permission) asserts a non-admin user is allowed through this exact branch; api/models/account.py:403-407 sets the TenantPluginPermission.install_permission column's own default/server_default to EVERYONE, matching the no-row fallback."
+    reason: ""
