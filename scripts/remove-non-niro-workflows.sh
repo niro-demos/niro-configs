@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 #
-# Remove GitHub Actions workflow files whose workflow title does not contain
-# "niro" (case-insensitive). Changes are proposed on a branch and draft PR.
+# Delete GitHub Actions workflow runs unless the visible run title contains
+# "Niro Find" or "Niro Fix" (case-insensitive).
 #
-# SAFE BY DEFAULT: without --apply, this only lists workflow files that would
-# be removed. The GitHub CLI must be installed and authenticated.
+# SAFE BY DEFAULT: without --apply, this only lists workflow runs that would be
+# deleted. Deleting a run also deletes its logs and artifacts and cannot be
+# undone. The GitHub CLI must be installed and authenticated.
 #
 # Usage:
 #   scripts/remove-non-niro-workflows.sh OWNER/REPOSITORY
@@ -15,7 +16,7 @@ set -euo pipefail
 DO_APPLY=0
 REPOSITORY=""
 
-usage() { sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -61,17 +62,17 @@ gh auth status >/dev/null 2>&1 || {
   exit 1
 }
 
-if ! workflows="$(
+if ! workflow_runs="$(
   gh api --paginate \
-    "repos/$REPOSITORY/actions/workflows?per_page=100" \
-    --jq '.workflows[] | [.path, .name] | @tsv'
+    "repos/$REPOSITORY/actions/runs?per_page=100" \
+    --jq '.workflow_runs[] | [.id, .display_title, .name] | @tsv'
 )"; then
-  echo "error: could not list workflows in $REPOSITORY" >&2
+  echo "error: could not list workflow runs in $REPOSITORY" >&2
   exit 1
 fi
 
-if [ -z "$workflows" ]; then
-  echo "No GitHub Actions workflows in $REPOSITORY."
+if [ -z "$workflow_runs" ]; then
+  echo "No GitHub Actions workflow runs in $REPOSITORY."
   exit 0
 fi
 
@@ -79,112 +80,55 @@ deletion_candidates=""
 delete_count=0
 preserve_count=0
 
-while IFS=$'\t' read -r path title; do
-  case "$title" in
-    *[Nn][Ii][Rr][Oo]*)
+while IFS=$'\t' read -r run_id run_title workflow_name; do
+  case "$run_title" in
+    *[Nn][Ii][Rr][Oo]\ [Ff][Ii][Nn][Dd]*|*[Nn][Ii][Rr][Oo]\ [Ff][Ii][Xx]*)
       preserve_count=$((preserve_count + 1))
       ;;
     *)
       if [ -n "$deletion_candidates" ]; then
         deletion_candidates+=$'\n'
       fi
-      deletion_candidates+="$path"$'\t'"$title"
+      deletion_candidates+="$run_id"$'\t'"$run_title"$'\t'"$workflow_name"
       delete_count=$((delete_count + 1))
       ;;
   esac
-done <<< "$workflows"
+done <<< "$workflow_runs"
 
-echo "Preserving $preserve_count workflow(s) whose title contains 'niro'."
+echo "Preserving $preserve_count run(s) titled 'Niro Find' or 'Niro Fix'."
 
 if [ "$delete_count" -eq 0 ]; then
-  echo "No workflows need to be removed from $REPOSITORY."
+  echo "No workflow runs need to be deleted from $REPOSITORY."
   exit 0
 fi
 
-echo "Workflow files to remove from $REPOSITORY:"
-while IFS=$'\t' read -r path title; do
-  printf '  %s (%s)\n' "$path" "$title"
+echo "Workflow runs to delete from $REPOSITORY:"
+while IFS=$'\t' read -r run_id run_title workflow_name; do
+  printf '  %s: %s (%s)\n' "$run_id" "$run_title" "$workflow_name"
 done <<< "$deletion_candidates"
 
 if [ "$DO_APPLY" -eq 0 ]; then
   echo
-  echo "Dry run: $delete_count workflow file(s) would be removed."
-  echo "Run again with --apply to open a draft pull request for the removals."
+  echo "Dry run: $delete_count workflow run(s) would be permanently deleted."
+  echo "Run again with --apply to delete them, including their logs and artifacts."
   exit 0
 fi
 
-command -v git >/dev/null 2>&1 || {
-  echo "error: git not found" >&2
-  exit 1
-}
+echo "Deleting $delete_count workflow run(s) from $REPOSITORY..."
+deleted=0
+failures=0
 
-if ! default_branch="$(
-  gh repo view "$REPOSITORY" \
-    --json defaultBranchRef \
-    --jq '.defaultBranchRef.name // empty'
-)" || [ -z "$default_branch" ]; then
-  echo "error: could not determine the default branch for $REPOSITORY" >&2
-  exit 1
-fi
-
-work_dir="$(mktemp -d)"
-cleanup() { rm -rf -- "$work_dir"; }
-trap cleanup EXIT
-
-branch="niro/remove-non-niro-workflows-$(date -u +%Y%m%d%H%M%S)-$$"
-
-git clone --depth 1 --filter=blob:none --no-checkout --quiet \
-  "https://github.com/$REPOSITORY.git" "$work_dir/repository"
-
-(
-  cd "$work_dir/repository"
-  git sparse-checkout set .github/workflows
-  git checkout -q "$default_branch"
-  git switch -c "$branch" >/dev/null
-
-  while IFS=$'\t' read -r path title; do
-    case "$path" in
-      .github/workflows/*.yml|.github/workflows/*.yaml)
-        file_name="${path#.github/workflows/}"
-        ;;
-      *)
-        echo "error: refusing unsafe workflow path: $path" >&2
-        exit 1
-        ;;
-    esac
-
-    case "$file_name" in
-      ""|*/*)
-        echo "error: refusing unsafe workflow path: $path" >&2
-        exit 1
-        ;;
-    esac
-
-    if [ ! -f "$path" ]; then
-      echo "error: workflow file is missing from the checkout: $path" >&2
-      exit 1
-    fi
-
-    rm -- "$path"
-  done <<< "$deletion_candidates"
-
-  git add -u -- .github/workflows
-  if git diff --cached --quiet; then
-    echo "error: no workflow deletions to commit" >&2
-    exit 1
+while IFS=$'\t' read -r run_id run_title workflow_name; do
+  printf 'Deleting %s: %s (%s)\n' "$run_id" "$run_title" "$workflow_name"
+  if gh api --method DELETE \
+    "repos/$REPOSITORY/actions/runs/$run_id" \
+    --silent; then
+    deleted=$((deleted + 1))
+  else
+    echo "error: failed to delete workflow run $run_id" >&2
+    failures=$((failures + 1))
   fi
+done <<< "$deletion_candidates"
 
-  git commit -q -m "ci: remove non-Niro workflows"
-  git push -q -u origin "$branch"
-
-  pull_request_url="$(
-    gh pr create \
-      --repo "$REPOSITORY" \
-      --base "$default_branch" \
-      --head "$branch" \
-      --draft \
-      --title "ci: remove non-Niro workflows" \
-      --body "Removes $delete_count GitHub Actions workflow file(s) whose workflow title does not contain 'niro' (case-insensitive)."
-  )"
-  echo "Opened draft pull request: $pull_request_url"
-)
+echo "Deleted $deleted workflow run(s); $failures failed."
+[ "$failures" -eq 0 ]

@@ -169,18 +169,18 @@ shown in the preview:
 scripts/close-pull-requests.sh --apply niro-demos/gitea
 ```
 
-## Remove non-Niro workflows
+## Remove non-Niro workflow runs
 
-Use the workflow cleanup script to list GitHub Actions workflow files whose
-workflow title does not contain `niro` (case-insensitive):
+Use the workflow cleanup script to list the runs on a repository's GitHub
+Actions page whose visible title does not contain `Niro Find` or `Niro Fix`
+(case-insensitive):
 
 ```bash
 scripts/remove-non-niro-workflows.sh niro-demos/gitea
 ```
 
-The script is also a dry run by default. Pass `--apply` to delete the listed
-files on a new branch and open a draft pull request against the target
-repository's default branch:
+The script is also a dry run by default. Pass `--apply` to permanently delete
+the listed workflow runs, including their logs and artifacts:
 
 ```bash
 scripts/remove-non-niro-workflows.sh --apply niro-demos/gitea
