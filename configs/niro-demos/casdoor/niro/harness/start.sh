@@ -34,7 +34,7 @@ LOG_CONFIG_JSON=$(printf '{"adapter":"file","filename":"%s","maxdays":99999,"per
 
 (
   cd "$SERVE_DIR"
-  env \
+  setsid env \
     appname=casdoor \
     httpport="$HTTP_PORT" \
     runmode=dev \
@@ -51,8 +51,8 @@ LOG_CONFIG_JSON=$(printf '{"adapter":"file","filename":"%s","maxdays":99999,"per
     ldapServerPort="$LDAP_PORT" \
     ldapsServerPort="$LDAPS_PORT" \
     ldapsCertId="admin/cert-built-in" \
-    nohup "$SERVER_BIN" \
-    > "$RUN_DIR/server-stdout.log" 2>&1 &
+    "$SERVER_BIN" \
+    </dev/null > "$RUN_DIR/server-stdout.log" 2>&1 &
   echo $! > "$PID_FILE"
 )
 
