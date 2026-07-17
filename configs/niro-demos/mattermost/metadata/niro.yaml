@@ -2,8 +2,8 @@ repository: niro-demos/mattermost
 niro_dir: niro
 upstream: mattermost/mattermost
 upstream_sha: 1d9dfa933a19826c4e134cfebe389ebbfa4d4dd8
-niro_version: 0.1.58
+niro_version: 0.1.62
 installable: true
-validated_at: 2026-07-15
-source_run: https://github.com/niro-demos/mattermost/actions/runs/29428481406
+validated_at: 2026-07-17
+source_run: https://github.com/niro-demos/mattermost/actions/runs/29547779480
 source_run_conclusion: success
