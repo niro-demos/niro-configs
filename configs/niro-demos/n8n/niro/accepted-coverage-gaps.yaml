@@ -36,3 +36,6 @@ accepted_coverage_gaps:
 
   - gap: "Queue/scaling-mode execution (separate webhook and worker processes, Redis-backed queue)"
     reason: "The harness runs n8n as a single process (main + embedded webhook + embedded worker via EXECUTIONS_MODE=regular, the default) for a fast, low-resource CI boot. Queue-mode-specific behavior (cross-process job handoff, worker isolation, Redis-backed queue auth/isolation) is not exercised. No Redis is provisioned in this environment."
+
+  - gap: "Python/Pyodide code-node execution containment (as distinct from the JS Code node)"
+    reason: "The Python task-runner process (packages/cli/src/task-runners/task-runner-process-py.ts) is not provisioned in this harness — only the JS task-runner is started. Pyodide-based Python execution is also being removed in n8n v2 (see packages/cli/src/modules/breaking-changes/rules/v2/pyodide-removed.rule.ts), so this surface is both currently unprovisioned and slated for removal. The JS Code node — the actively maintained equivalent surface — was fully probed."
