@@ -154,6 +154,38 @@ The generated Find and Fix workflows use an immutable installer commit. Update
 that pin when installer code changes. Reviewed catalog changes are loaded from
 protected `main` automatically and do not require project workflow updates.
 
+## Close open pull requests
+
+Use the maintenance script to list every open pull request in a repository:
+
+```bash
+scripts/close-pull-requests.sh niro-demos/gitea
+```
+
+The script is a dry run by default. Pass `--apply` to close every pull request
+shown in the preview:
+
+```bash
+scripts/close-pull-requests.sh --apply niro-demos/gitea
+```
+
+## Remove non-Niro workflow runs
+
+Use the workflow cleanup script to list the runs on a repository's GitHub
+Actions page whose visible title does not contain `Niro Find` or `Niro Fix`
+(case-insensitive):
+
+```bash
+scripts/remove-non-niro-workflows.sh niro-demos/gitea
+```
+
+The script is also a dry run by default. Pass `--apply` to permanently delete
+the listed workflow runs, including their logs and artifacts:
+
+```bash
+scripts/remove-non-niro-workflows.sh --apply niro-demos/gitea
+```
+
 ## Repository layout
 
 ```text
