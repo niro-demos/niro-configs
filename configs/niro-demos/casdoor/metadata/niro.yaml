@@ -2,8 +2,8 @@ repository: niro-demos/casdoor
 niro_dir: niro
 upstream: casdoor/casdoor
 upstream_sha: 9cead9a7273d454ec6d823f0f2f322456c64158b
-niro_version: 0.1.58
+niro_version: 0.1.62
 installable: true
-validated_at: 2026-07-15
-source_run: https://github.com/niro-demos/casdoor/actions/runs/29389934724
+validated_at: 2026-07-17
+source_run: https://github.com/niro-demos/casdoor/actions/runs/29541640259
 source_run_conclusion: success
