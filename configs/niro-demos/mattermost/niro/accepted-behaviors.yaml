@@ -33,3 +33,6 @@ accepted_behaviors:
   # Added by the tool — accepted, rationale not yet documented:
   - consequence: "When hardened mode is disabled and password-reset email delivery fails, an unauthenticated caller can distinguish registered from unregistered email addresses by the HTTP response."
     evidence: "server/channels/api4/user.go:2079-2086 explicitly masks password-reset delivery errors only when ServiceSettings.ExperimentalEnableHardenedMode is enabled; docs/main/administration-guide/configure/experimental-configuration-settings.mdx:270-292 documents hardened mode as an opt-in security-versus-user-experience trade-off that sanitizes 500 errors and defaults to false."
+  # Added by the tool — accepted, rationale not yet documented:
+  - consequence: "On self-hosted deployments that accept arbitrary request host values, an unauthenticated requester can make the magic-link account-entry route redirect users to an attacker-controlled login origin, enabling credential phishing."
+    evidence: "server/channels/web/handlers.go:225-227 intentionally derives the redirect base from the request Host for self-hosted deployments while the IsCloud capability branch uses configured SiteURL; server/channels/web/magic_link.go:23-24 uses that base for the disabled magic-link redirect."
