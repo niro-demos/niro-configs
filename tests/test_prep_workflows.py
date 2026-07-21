@@ -47,21 +47,49 @@ class PrepWorkflowTests(unittest.TestCase):
             with self.subTest(template=name):
                 block = self.template(name)
                 run_at = block.index("- name: Run Niro")
+                token_at = block.index("- name: Create Niro config catalog token")
                 report_at = block.index("- name: Upload Niro penetration-test report")
                 debug_at = block.index("- name: Upload debug logs")
                 self.assertLess(run_at, report_at)
                 self.assertLess(report_at, debug_at)
 
+                run_step = block[run_at:token_at]
+                for expected in (
+                    "id: niro",
+                    "run: |",
+                    'report_log="$(mktemp)"',
+                    "set +e",
+                    '2>&1 | tee "$report_log"',
+                    'niro_status="${PIPESTATUS[0]}"',
+                    "set -e",
+                    "report_path=\"$(sed -n 's/^niro: report: //p' \"$report_log\" | tail -n 1)\"",
+                    'echo "report_path=$report_path" >> "$GITHUB_OUTPUT"',
+                    'exit "$niro_status"',
+                ):
+                    self.assertIn(expected, run_step)
+
                 report_step = block[report_at:debug_at]
                 for expected in (
-                    "if: always()",
+                    "if: always() && steps.niro.outputs.report_path != ''",
                     "uses: actions/upload-artifact@v7",
-                    "name: niro-pentest-report",
-                    "path: ${{ runner.temp }}/niro-reports/**/penetration-test-report-*.pdf",
+                    "path: ${{ steps.niro.outputs.report_path }}",
+                    "archive: false",
                     "if-no-files-found: ignore",
                     "retention-days: 30",
                 ):
                     self.assertIn(expected, report_step)
+                self.assertNotIn("name: niro-pentest-report", report_step)
+                self.assertNotIn("${{ runner.temp }}/niro-reports", report_step)
+
+    def test_find_and_fix_keep_knowledge_artifact(self) -> None:
+        for name in ("find_template", "fix_template"):
+            with self.subTest(template=name):
+                block = self.template(name)
+                knowledge_at = block.index("- name: Upload Niro knowledge")
+                report_at = block.index("- name: Upload Niro penetration-test report")
+                knowledge_step = block[knowledge_at:report_at]
+                self.assertIn("name: niro-knowledge", knowledge_step)
+                self.assertIn("path: niro-knowledge.tar", knowledge_step)
 
     def test_find_and_fix_install_approved_config_before_niro(self) -> None:
         expected = f"uses: {INSTALL_ACTION}"
