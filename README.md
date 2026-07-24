@@ -58,7 +58,8 @@ repository's `.github/workflows/ci.yml`.
 
 1. A project workflow installs its approved config before `niro find` or
    `niro fix`.
-2. Niro uploads `niro-knowledge.tar` after the run.
+2. Niro writes the reviewed knowledge bundle to
+   `<niro-dir>/artifacts/knowledge.tar` after the run.
 3. The post-run proposal action imports the complete artifact on a feature branch.
 4. The action opens a draft PR containing the sanitized replacement.
 5. This repository's CI automatically runs tests, shell syntax checks, and
@@ -70,8 +71,8 @@ repository's `.github/workflows/ci.yml`.
 Generated demo workflows automate the trusted-contributor steps after a
 successful Niro run. They use the existing Niro GitHub App credentials to mint
 a repository-scoped token for the post-run proposal action, replace the selected
-named config from `niro-knowledge.tar`, validate it, and open a draft PR in this
-repository. They never merge the proposal.
+named config from `<niro-dir>/artifacts/knowledge.tar`, validate it, and open a
+draft PR in this repository. They never merge the proposal.
 
 Configure these organization or project secrets:
 
@@ -123,7 +124,7 @@ Create a feature branch, then import a downloaded knowledge artifact:
 python3 scripts/catalog.py import \
   --repository niro-demos/gitea \
   --niro-dir niro \
-  --archive ./niro-knowledge.tar \
+  --archive ./knowledge.tar \
   --upstream go-gitea/gitea \
   --upstream-sha <tested-commit> \
   --niro-version <version> \

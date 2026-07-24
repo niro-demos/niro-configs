@@ -100,6 +100,10 @@ jobs:
     name: Pentest and report findings
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    # Niro's config dir. Change it in this one place (e.g. niro-staging) and
+    # the install, run, proposal, and artifact upload below all follow.
+    env:
+      NIRO_CONFIG_DIR: niro
 
     steps:
       - name: Check out repository
@@ -111,7 +115,7 @@ jobs:
         uses: niro-demos/niro-configs/.github/actions/install@8c1cc4a6a127684d1395740a74faa5f9128d3a08
         with:
           repository: ${{ github.repository }}
-          niro-dir: niro
+          niro-dir: ${{ env.NIRO_CONFIG_DIR }}
           install-root: ${{ github.workspace }}
 
       - name: Install Niro
@@ -132,7 +136,6 @@ jobs:
       # Codex/Copilot setup and other CI settings:
       # https://github.com/apxlabs-ai/niro/blob/main/docs/ci-environment.md
       - name: Run Niro
-        id: niro
         shell: bash
         env:
           CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
@@ -144,20 +147,13 @@ jobs:
           COPILOT_PROVIDER_TYPE: openai
           COPILOT_MODEL: z-ai/glm-5.2
         run: |
-          report_log="$(mktemp)"
-          set +e
           niro find \
             --autonomous \
             --agent=@@AGENT@@ \
             --goal="Pentest this application" \
-            --config-dir=niro \
+            --config-dir="$NIRO_CONFIG_DIR" \
             --include-findings=true \
-            --upload-debug-logs=true 2>&1 | tee "$report_log"
-          niro_status="${PIPESTATUS[0]}"
-          set -e
-          report_path="$(sed -n 's/^niro: report: //p' "$report_log" | tail -n 1)"
-          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
-          exit "$niro_status"
+            --upload-debug-logs=false
 
       - name: Create Niro config catalog token
         id: niro-configs-token
@@ -173,31 +169,26 @@ jobs:
         with:
           catalog-token: ${{ steps.niro-configs-token.outputs.token }}
           source-token: ${{ github.token }}
-          archive: ${{ github.workspace }}/niro-knowledge.tar
+          archive: ${{ github.workspace }}/${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar
           repository: ${{ github.repository }}
-          niro-dir: niro
+          niro-dir: ${{ env.NIRO_CONFIG_DIR }}
           source-sha: ${{ github.sha }}
           source-run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - name: Upload Niro knowledge
+      # The report and knowledge bundle, by stable filename. The findings
+      # summary already renders in the GitHub job summary, so it needs no upload.
+      - name: Upload Niro artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: niro-knowledge
-          path: niro-knowledge.tar
+          name: niro-artifacts
+          path: |
+            ${{ env.NIRO_CONFIG_DIR }}/artifacts/penetration-test-report.pdf
+            ${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Upload Niro penetration-test report
-        if: always() && steps.niro.outputs.report_path != ''
-        uses: actions/upload-artifact@v7
-        with:
-          path: ${{ steps.niro.outputs.report_path }}
-          archive: false
-          if-no-files-found: ignore
-          retention-days: 30
-
-      # Uploads only when the run wrote the tar — enabled explicitly above.
+      # Change --upload-debug-logs to true above to produce this unsafe bundle.
       - name: Upload debug logs
         if: always()
         uses: actions/upload-artifact@v7
@@ -231,6 +222,10 @@ jobs:
     name: Pentest and open fix PRs
     runs-on: ubuntu-latest
     timeout-minutes: 300
+    # Niro's config dir. Change it in this one place (e.g. niro-staging) and
+    # the install, run, proposal, and artifact upload below all follow.
+    env:
+      NIRO_CONFIG_DIR: niro
 
     steps:
       - name: Check out repository
@@ -244,7 +239,7 @@ jobs:
         uses: niro-demos/niro-configs/.github/actions/install@8c1cc4a6a127684d1395740a74faa5f9128d3a08
         with:
           repository: ${{ github.repository }}
-          niro-dir: niro
+          niro-dir: ${{ env.NIRO_CONFIG_DIR }}
           install-root: ${{ github.workspace }}
 
       - name: Install Niro
@@ -265,7 +260,6 @@ jobs:
       # Codex/Copilot setup and other CI settings:
       # https://github.com/apxlabs-ai/niro/blob/main/docs/ci-environment.md
       - name: Run Niro
-        id: niro
         shell: bash
         env:
           CODEX_AUTH_JSON_B64: ${{ secrets.CODEX_AUTH_JSON_B64 }}
@@ -279,21 +273,13 @@ jobs:
           COPILOT_PROVIDER_TYPE: openai
           COPILOT_MODEL: z-ai/glm-5.2
         run: |
-          report_log="$(mktemp)"
-          set +e
           niro fix \
             --autonomous \
             --agent=@@AGENT@@ \
             --goal="Pentest this application" \
-            --config-dir=niro \
-            --generate-report \
+            --config-dir="$NIRO_CONFIG_DIR" \
             --include-findings=true \
-            --upload-debug-logs=true 2>&1 | tee "$report_log"
-          niro_status="${PIPESTATUS[0]}"
-          set -e
-          report_path="$(sed -n 's/^niro: report: //p' "$report_log" | tail -n 1)"
-          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
-          exit "$niro_status"
+            --upload-debug-logs=false
 
       - name: Create Niro config catalog token
         id: niro-configs-token
@@ -309,31 +295,26 @@ jobs:
         with:
           catalog-token: ${{ steps.niro-configs-token.outputs.token }}
           source-token: ${{ github.token }}
-          archive: ${{ github.workspace }}/niro-knowledge.tar
+          archive: ${{ github.workspace }}/${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar
           repository: ${{ github.repository }}
-          niro-dir: niro
+          niro-dir: ${{ env.NIRO_CONFIG_DIR }}
           source-sha: ${{ github.sha }}
           source-run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - name: Upload Niro knowledge
+      # The report and knowledge bundle, by stable filename. The findings
+      # summary already renders in the GitHub job summary, so it needs no upload.
+      - name: Upload Niro artifacts
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: niro-knowledge
-          path: niro-knowledge.tar
+          name: niro-artifacts
+          path: |
+            ${{ env.NIRO_CONFIG_DIR }}/artifacts/penetration-test-report.pdf
+            ${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Upload Niro penetration-test report
-        if: always() && steps.niro.outputs.report_path != ''
-        uses: actions/upload-artifact@v7
-        with:
-          path: ${{ steps.niro.outputs.report_path }}
-          archive: false
-          if-no-files-found: ignore
-          retention-days: 30
-
-      # Uploads only when the run wrote the tar — enabled explicitly above.
+      # Change --upload-debug-logs to true above to produce this unsafe bundle.
       - name: Upload debug logs
         if: always()
         uses: actions/upload-artifact@v7
