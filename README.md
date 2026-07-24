@@ -155,6 +155,9 @@ The generated Find and Fix workflows use an immutable installer commit. Update
 that pin when installer code changes. Reviewed catalog changes are loaded from
 protected `main` automatically and do not require project workflow updates.
 
+Generated reports upload as direct PDF artifacts, while each knowledge bundle
+uploads separately as `niro-knowledge`.
+
 Demo workflows enable Niro debug-log generation and upload the resulting
 `niro-debug-logs-unsafe` artifact for 7 days. Treat that short-lived artifact as
 sensitive troubleshooting data; never commit it to a repository.
