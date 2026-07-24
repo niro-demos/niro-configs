@@ -26,70 +26,67 @@ class PrepWorkflowTests(unittest.TestCase):
         self.assertIsNotNone(match, f"missing {name}")
         return match.group(0)
 
-    def test_find_and_fix_save_findings_and_debug_logs(self) -> None:
+    def test_find_and_fix_save_findings_without_debug_logs(self) -> None:
         for name in ("find_template", "fix_template"):
             with self.subTest(template=name):
                 block = self.template(name)
                 self.assertIn("--include-findings=true", block)
-                self.assertIn("--upload-debug-logs=true", block)
+                self.assertIn("--upload-debug-logs=false", block)
 
-    def test_only_fix_explicitly_generates_reports(self) -> None:
-        self.assertNotIn("--generate-report", self.template("find_template"))
-        self.assertIn("--generate-report", self.template("fix_template"))
+    def test_find_and_fix_use_default_report_generation(self) -> None:
+        for name in ("find_template", "fix_template"):
+            with self.subTest(template=name):
+                self.assertNotIn("--generate-report", self.template(name))
 
     def test_find_and_fix_run_autonomously(self) -> None:
         for name in ("find_template", "fix_template"):
             with self.subTest(template=name):
                 self.assertIn("--autonomous", self.template(name))
 
-    def test_find_and_fix_upload_generated_reports(self) -> None:
+    def test_find_and_fix_upload_stable_artifacts(self) -> None:
         for name in ("find_template", "fix_template"):
             with self.subTest(template=name):
                 block = self.template(name)
                 run_at = block.index("- name: Run Niro")
                 token_at = block.index("- name: Create Niro config catalog token")
-                report_at = block.index("- name: Upload Niro penetration-test report")
+                artifacts_at = block.index("- name: Upload Niro artifacts")
                 debug_at = block.index("- name: Upload debug logs")
-                self.assertLess(run_at, report_at)
-                self.assertLess(report_at, debug_at)
+                self.assertLess(run_at, artifacts_at)
+                self.assertLess(artifacts_at, debug_at)
 
                 run_step = block[run_at:token_at]
                 for expected in (
-                    "id: niro",
                     "run: |",
-                    'report_log="$(mktemp)"',
-                    "set +e",
-                    '2>&1 | tee "$report_log"',
-                    'niro_status="${PIPESTATUS[0]}"',
-                    "set -e",
-                    "report_path=\"$(sed -n 's/^niro: report: //p' \"$report_log\" | tail -n 1)\"",
-                    'echo "report_path=$report_path" >> "$GITHUB_OUTPUT"',
-                    'exit "$niro_status"',
+                    '--config-dir="$NIRO_CONFIG_DIR"',
                 ):
                     self.assertIn(expected, run_step)
+                self.assertNotIn("id: niro", run_step)
+                self.assertNotIn("report_log", run_step)
+                self.assertNotIn("GITHUB_OUTPUT", run_step)
 
-                report_step = block[report_at:debug_at]
+                artifacts_step = block[artifacts_at:debug_at]
                 for expected in (
-                    "if: always() && steps.niro.outputs.report_path != ''",
+                    "if: always()",
                     "uses: actions/upload-artifact@v7",
-                    "path: ${{ steps.niro.outputs.report_path }}",
-                    "archive: false",
+                    "name: niro-artifacts",
+                    "${{ env.NIRO_CONFIG_DIR }}/artifacts/penetration-test-report.pdf",
+                    "${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar",
                     "if-no-files-found: ignore",
                     "retention-days: 30",
                 ):
-                    self.assertIn(expected, report_step)
-                self.assertNotIn("name: niro-pentest-report", report_step)
-                self.assertNotIn("${{ runner.temp }}/niro-reports", report_step)
+                    self.assertIn(expected, artifacts_step)
+                self.assertNotIn("archive: false", artifacts_step)
 
-    def test_find_and_fix_keep_knowledge_artifact(self) -> None:
+    def test_find_and_fix_share_one_config_directory(self) -> None:
         for name in ("find_template", "fix_template"):
             with self.subTest(template=name):
                 block = self.template(name)
-                knowledge_at = block.index("- name: Upload Niro knowledge")
-                report_at = block.index("- name: Upload Niro penetration-test report")
-                knowledge_step = block[knowledge_at:report_at]
-                self.assertIn("name: niro-knowledge", knowledge_step)
-                self.assertIn("path: niro-knowledge.tar", knowledge_step)
+                self.assertIn("env:\n      NIRO_CONFIG_DIR: niro", block)
+                self.assertIn("niro-dir: ${{ env.NIRO_CONFIG_DIR }}", block)
+                self.assertIn('--config-dir="$NIRO_CONFIG_DIR"', block)
+                self.assertIn(
+                    "${{ env.NIRO_CONFIG_DIR }}/artifacts/knowledge.tar", block
+                )
 
     def test_find_and_fix_install_approved_config_before_niro(self) -> None:
         expected = f"uses: {INSTALL_ACTION}"
@@ -100,7 +97,7 @@ class PrepWorkflowTests(unittest.TestCase):
                 self.assertLess(block.index(expected), block.index("- name: Install Niro"))
                 install_step = block[block.index(expected) : block.index("- name: Install Niro")]
                 self.assertIn("repository: ${{ github.repository }}", install_step)
-                self.assertIn("niro-dir: niro", install_step)
+                self.assertIn("niro-dir: ${{ env.NIRO_CONFIG_DIR }}", install_step)
                 self.assertIn("install-root: ${{ github.workspace }}", install_step)
 
     def test_find_and_fix_propose_config_after_niro(self) -> None:
@@ -111,7 +108,7 @@ class PrepWorkflowTests(unittest.TestCase):
                 preflight_at = block.index("- name: Verify Niro config proposal credentials")
                 token_at = block.index("uses: actions/create-github-app-token@v3")
                 propose_at = block.index(f"uses: {PROPOSE_ACTION}")
-                upload_at = block.index("- name: Upload Niro knowledge")
+                upload_at = block.index("- name: Upload Niro artifacts")
                 self.assertLess(preflight_at, run_at)
                 self.assertLess(run_at, token_at)
                 self.assertLess(token_at, propose_at)
@@ -128,9 +125,13 @@ class PrepWorkflowTests(unittest.TestCase):
                 proposal = block[propose_at:upload_at]
                 self.assertIn("catalog-token: ${{ steps.niro-configs-token.outputs.token }}", proposal)
                 self.assertIn("source-token: ${{ github.token }}", proposal)
-                self.assertIn("archive: ${{ github.workspace }}/niro-knowledge.tar", proposal)
+                self.assertIn(
+                    "archive: ${{ github.workspace }}/${{ env.NIRO_CONFIG_DIR }}"
+                    "/artifacts/knowledge.tar",
+                    proposal,
+                )
                 self.assertIn("repository: ${{ github.repository }}", proposal)
-                self.assertIn("niro-dir: niro", proposal)
+                self.assertIn("niro-dir: ${{ env.NIRO_CONFIG_DIR }}", proposal)
                 self.assertIn("source-sha: ${{ github.sha }}", proposal)
                 self.assertIn("${{ github.run_id }}", proposal)
 
