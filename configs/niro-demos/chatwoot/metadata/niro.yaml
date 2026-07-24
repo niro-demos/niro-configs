@@ -1,9 +1,0 @@
-repository: niro-demos/chatwoot
-niro_dir: niro
-upstream: niro-demos/chatwoot
-upstream_sha: ea9c4b84371263efe0e02380b1542b046a72b8fe
-niro_version: 0.1.64
-installable: true
-validated_at: 2026-07-21
-source_run: https://github.com/niro-demos/chatwoot/actions/runs/29805253642
-source_run_conclusion: success
