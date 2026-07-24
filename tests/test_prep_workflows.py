@@ -26,12 +26,24 @@ class PrepWorkflowTests(unittest.TestCase):
         self.assertIsNotNone(match, f"missing {name}")
         return match.group(0)
 
-    def test_find_and_fix_save_findings_without_debug_logs(self) -> None:
+    def test_find_and_fix_save_findings_and_debug_logs(self) -> None:
         for name in ("find_template", "fix_template"):
             with self.subTest(template=name):
                 block = self.template(name)
                 self.assertIn("--include-findings=true", block)
-                self.assertIn("--upload-debug-logs=false", block)
+                self.assertIn("--upload-debug-logs=true", block)
+
+                debug_at = block.index("- name: Upload debug logs")
+                debug_step = block[debug_at:]
+                for expected in (
+                    "if: always()",
+                    "uses: actions/upload-artifact@v7",
+                    "name: niro-debug-logs-unsafe",
+                    "path: niro-debug-logs.tar",
+                    "if-no-files-found: ignore",
+                    "retention-days: 7",
+                ):
+                    self.assertIn(expected, debug_step)
 
     def test_find_and_fix_use_default_report_generation(self) -> None:
         for name in ("find_template", "fix_template"):

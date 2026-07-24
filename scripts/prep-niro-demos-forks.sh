@@ -153,7 +153,7 @@ jobs:
             --goal="Pentest this application" \
             --config-dir="$NIRO_CONFIG_DIR" \
             --include-findings=true \
-            --upload-debug-logs=false
+            --upload-debug-logs=true
 
       - name: Create Niro config catalog token
         id: niro-configs-token
@@ -188,7 +188,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      # Change --upload-debug-logs to true above to produce this unsafe bundle.
+      # Demo workflows retain this unsafe bundle for short-lived troubleshooting.
       - name: Upload debug logs
         if: always()
         uses: actions/upload-artifact@v7
@@ -279,7 +279,7 @@ jobs:
             --goal="Pentest this application" \
             --config-dir="$NIRO_CONFIG_DIR" \
             --include-findings=true \
-            --upload-debug-logs=false
+            --upload-debug-logs=true
 
       - name: Create Niro config catalog token
         id: niro-configs-token
@@ -314,7 +314,7 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      # Change --upload-debug-logs to true above to produce this unsafe bundle.
+      # Demo workflows retain this unsafe bundle for short-lived troubleshooting.
       - name: Upload debug logs
         if: always()
         uses: actions/upload-artifact@v7
