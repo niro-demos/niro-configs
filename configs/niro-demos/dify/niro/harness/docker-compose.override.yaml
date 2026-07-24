@@ -1,0 +1,93 @@
+# Niro harness override for docker/docker-compose.yaml.
+#
+# Purpose: make the "api" and "web" services (the code under test) build
+# from THIS checkout instead of pulling the pinned langgenius/dify-api and
+# langgenius/dify-web release images, and keep all runtime state (databases,
+# storage, logs) under niro/harness/run/ instead of docker/volumes/ so the
+# harness never writes into the application source tree.
+#
+# Everything else (postgres, redis, weaviate, sandbox, local_sandbox,
+# plugin_daemon, agent_backend, ssrf_proxy, nginx) is left exactly as
+# docker/docker-compose.yaml defines it -- these are supporting
+# infrastructure, not the checkout under review.
+#
+# Invoke together with docker/docker-compose.yaml, docker-compose.yaml FIRST:
+#   docker compose -f docker/docker-compose.yaml \
+#                  -f niro/harness/docker-compose.override.yaml \
+#                  --env-file docker/.env -p <project> ...
+# with NIRO_REPO_ROOT and NIRO_RUN_DIR exported (see ../lib.sh). File order
+# matters: docker compose resolves every relative path (in every -f file)
+# against the directory of the FIRST compose file listed, so this override
+# uses absolute paths (via env vars) instead of relative ones.
+
+x-niro-api-build: &niro-api-build
+  build:
+    context: ${NIRO_REPO_ROOT}
+    dockerfile: api/Dockerfile
+  image: niro-dify-api:local
+  pull_policy: never
+
+services:
+  # --- code under test: build from the checkout ---
+  api:
+    <<: *niro-api-build
+    volumes:
+      - ${NIRO_RUN_DIR}/volumes/app/storage:/app/api/storage
+
+  api_websocket:
+    <<: *niro-api-build
+
+  worker:
+    <<: *niro-api-build
+    volumes:
+      - ${NIRO_RUN_DIR}/volumes/app/storage:/app/api/storage
+
+  worker_beat:
+    <<: *niro-api-build
+
+  web:
+    build:
+      context: ${NIRO_REPO_ROOT}
+      dockerfile: web/Dockerfile
+    image: niro-dify-web:local
+    pull_policy: never
+
+  # init_permissions chowns the same storage volume the api/worker mount.
+  init_permissions:
+    volumes:
+      - ${NIRO_RUN_DIR}/volumes/app/storage:/app/api/storage
+
+  # --- supporting infrastructure: same images, state redirected under run/ ---
+  db_postgres:
+    volumes:
+      - ${NIRO_RUN_DIR}/volumes/db/data:/var/lib/postgresql/data
+      - ${NIRO_HARNESS_DIR}/postgres-initdb:/docker-entrypoint-initdb.d
+    ports: !reset []
+
+  redis:
+    volumes:
+      - ${NIRO_RUN_DIR}/volumes/redis/data:/data
+
+  sandbox:
+    volumes:
+      - ${NIRO_RUN_DIR}/volumes/sandbox/dependencies:/dependencies
+      # conf/config.yaml is a committed source file (docker/volumes/sandbox/conf/),
+      # not harness runtime state -- mount it read-only from the checkout itself,
+      # unlike the other volumes here which redirect mutable state under run/.
+      - ${NIRO_REPO_ROOT}/docker/volumes/sandbox/conf:/conf:ro
+
+  plugin_daemon:
+    volumes:
+      - ${NIRO_RUN_DIR}/volumes/plugin_daemon:/app/storage
+    ports: !reset []
+
+  weaviate:
+    volumes:
+      - ${NIRO_RUN_DIR}/volumes/weaviate:/var/lib/weaviate
+
+  # Only the reverse proxy is published to the host; every other service is
+  # reachable solely on the compose-internal network. NIRO_NGINX_PORT is
+  # chosen and persisted by start.sh.
+  nginx:
+    ports: !override
+      - "${NIRO_NGINX_PORT}:80"

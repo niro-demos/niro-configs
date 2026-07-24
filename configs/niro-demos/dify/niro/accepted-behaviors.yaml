@@ -1,0 +1,72 @@
+# accepted-behaviors.yaml — a risk-acceptance register.
+#
+# Every entry is a behavior treated as ACCEPTED: as long as an entry exists, the
+# tool considers that behavior intended and does not re-report it. To stop
+# accepting one, delete it — the finding comes back. Version control records who
+# changed what, and when.
+#
+#   consequence:  [tool] the precise risk, in plain terms a non-expert can
+#                 evaluate — what could actually happen. (max 1000 runes)
+#   evidence:     [tool] proof it looks intentional — comment / test / flag /
+#                 code, by file:line.
+#   reason:       [human] your team's rationale for accepting this — your own
+#                 documentation. The tool never writes it, and an entry is
+#                 accepted by being here, not by this field. But fill it in: an
+#                 undocumented acceptance no one can explain later is how real
+#                 risk quietly gets forgotten.
+#
+# Be specific enough to adjudicate in seconds. Vague entries hide real bugs.
+#
+# This file accumulates across runs and is APPEND-ONLY. Anyone updating it — tool
+# or human — must read it first, keep every existing entry (especially the human
+# `reason`), and only append; never rewrite, reorder, or drop entries. Presence
+# is the suppression signal, so a clobbered entry silently un-accepts a finding.
+# COMMIT it to git — that is your history, your review trail, and your undo.
+#
+# Create `accepted-behaviors.yaml` next to this file, carrying this header into
+# it so its rules travel with the data.
+
+accepted_behaviors:
+  # Added by the tool — accepted, rationale not yet documented:
+  - consequence: >-
+      TC-9EBC9D26: the External Knowledge API connection handler
+      (POST /console/api/datasets/external-knowledge-api, and the
+      <endpoint>/retrieval call-out it makes) performs no application-level
+      hostname/IP allow-deny check of its own before issuing the outbound
+      request, so if this endpoint were ever reached without the standard
+      forward-proxy in front of it, a workspace editor/owner could make the
+      server connect to arbitrary attacker-chosen addresses (including cloud
+      metadata / internal hosts) with response read-back via the retrieval
+      call-out.
+    evidence: >-
+      api/services/external_knowledge_service.py check_endpoint_and_api_key()
+      (~line 87-99) and fetch_external_knowledge_retrieval() (~line 380) both
+      send the request through core/helper/ssrf_proxy.py's ssrf_proxy client,
+      which routes all outbound traffic via the forward proxy configured by
+      SSRF_PROXY_HTTP_URL/SSRF_PROXY_HTTPS_URL (docker/.env.example:207-208 =
+      http://ssrf_proxy:3128) rather than doing its own IP validation;
+      ssrf_proxy.py's make_request() even special-cases a Squid-issued 401/403
+      ("Server"/"Via" header contains "squid") into a dedicated ToolSSRFError,
+      confirming the proxy layer is the intended enforcement point, by design,
+      for this SSRF control. In this harness the ssrf_proxy container (Ubuntu
+      Squid) is deployed unmodified from docker/docker-compose.yaml
+      (niro/harness/docker-compose.override.yaml:8-12 explicitly leaves
+      ssrf_proxy "exactly as docker/docker-compose.yaml defines it") with
+      docker/ssrf_proxy/squid.conf.template's `acl to_private_networks` /
+      `http_access deny to_private_networks` (lines 9-23, 47) denying
+      0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16,
+      172.16.0.0/12, 192.168.0.0/16 and their IPv6 equivalents. Reproducing
+      the finding's exact PoC against the running target and reading
+      /var/log/squid/access.log inside niro-dify-ssrf_proxy-1 immediately
+      afterward showed `TCP_DENIED/403` for every one of the finding's
+      internal targets (169.254.169.254/latest/meta-data/, 127.0.0.1:5001,
+      172.17.0.1 — the docker-bridge gateway, which falls in 172.16.0.0/12),
+      while the public baseline (example.com) passed through
+      (`HIER_DIRECT/<public IP>`). The connection to the disallowed address
+      never succeeds and no response body is ever read back; the app's
+      generic "failed to connect to the endpoint" message (raised because
+      check_endpoint_and_api_key's `except Exception` swallows the specific
+      ToolSSRFError) obscures *why* it failed but does not change that the
+      request was blocked pre-connect by the deployed proxy, not merely slow
+      to fail.
+    reason: ""
