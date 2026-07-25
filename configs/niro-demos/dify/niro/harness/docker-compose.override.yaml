@@ -1,0 +1,66 @@
+# Niro harness override: documents which services this checkout owns from
+# source (instead of pulling langgenius' published images) and their
+# context/dockerfile pairing, so the running target serves the current
+# working tree.
+#
+# Applied on top of docker/docker-compose.yaml:
+#   docker compose -f docker/docker-compose.yaml -f niro/harness/docker-compose.override.yaml ...
+#
+# Compose resolves every merged file's relative paths against the FIRST
+# -f file's directory (docker/docker-compose.yaml's, i.e. docker/), not
+# against this override file's own directory. So "context: .." here means
+# "one level up from docker/", i.e. the repo root.
+#
+# NOTE: start.sh does NOT actually build through these build: blocks --
+# `docker compose build` (buildx bake) fails to apply api/Dockerfile's and
+# web/Dockerfile's own dockerignore files once docker/volumes/ contains
+# service-uid-owned data (see start.sh's build step for the full story), so
+# start.sh builds each image directly with `docker buildx build` against a
+# synced copy of the working tree and loads it under the exact image name
+# these build: blocks (and docker-compose.yaml) declare. `docker compose up`
+# then finds a matching local image and does not invoke these itself. They
+# stay here as the human-reviewable declaration of what's built from source
+# and how, and so `docker compose build` starts working again for free if
+# that compose/buildx bug is ever fixed upstream.
+#
+# api / worker / worker_beat / api_websocket all reference the same
+# "langgenius/dify-api:*" image name in docker/docker-compose.yaml. Adding an
+# explicit build: block to each (rather than relying on tag reuse) keeps
+# `docker compose build` deterministic across Compose versions.
+#
+# plugin_daemon, sandbox, local_sandbox are third-party components with no
+# source in this checkout (published images are the correct, unmodified
+# target for those).
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+
+  api_websocket:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+
+  worker:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+
+  worker_beat:
+    build:
+      context: ..
+      dockerfile: api/Dockerfile
+
+  web:
+    build:
+      context: ..
+      dockerfile: web/Dockerfile
+
+  # dify-agent (this checkout's standalone agent backend) is the source
+  # behind the agent_backend service's published image.
+  agent_backend:
+    build:
+      context: ..
+      dockerfile: dify-agent/Dockerfile
