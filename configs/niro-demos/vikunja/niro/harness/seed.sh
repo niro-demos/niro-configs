@@ -92,6 +92,13 @@ register_user "$USER_B" "$EMAIL_B" "$PASSWORD_B"
 
 TOKEN_A="$(login_user "$USER_A" "$PASSWORD_A")"
 TOKEN_B="$(login_user "$USER_B" "$PASSWORD_B")"
+GIT_REVISION="$(git -C "$ROOT_DIR" rev-parse HEAD)"
+WORKTREE_STATUS="$(git -C "$ROOT_DIR" status --short)"
+if [[ -n "$WORKTREE_STATUS" ]]; then
+	WORKTREE_DIRTY=true
+else
+	WORKTREE_DIRTY=false
+fi
 
 PROJECT_A="$(create_project "$TOKEN_A" "Niro User A Private Project" "NIRA" "2d6cdf")"
 PROJECT_B="$(create_project "$TOKEN_B" "Niro User B Private Project" "NIRB" "f59f00")"
@@ -134,6 +141,8 @@ fixtures:
       frontend_url: "$FRONTEND_BASE"
       api_v1_url: "$FRONTEND_BASE/api/v1"
       api_v2_url: "$FRONTEND_BASE/api/v2"
+      git_revision: "$GIT_REVISION"
+      worktree_dirty: $WORKTREE_DIRTY
 
   - name: standard_user_a_private_project
     description: "Project owned only by STANDARD_USER_A for horizontal authorization checks."
