@@ -5,5 +5,5 @@ upstream_sha: acc70019669e07d1867f9c572437d62ec7cd0a85
 niro_version: 0.1.68
 installable: true
 validated_at: 2026-07-26
-source_run: https://github.com/niro-demos/vikunja/actions/runs/30179707445
+source_run: https://github.com/niro-demos/vikunja/actions/runs/30185384932
 source_run_conclusion: success
