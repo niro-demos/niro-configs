@@ -21,4 +21,10 @@
 # authored judgment, not derived data), so a clobbered entry is gone for good.
 # COMMIT it to git — that is your history, your review trail, and your undo.
 
-accepted_coverage_gaps: []
+accepted_coverage_gaps:
+  - gap: "External identity-provider login and callback flows for providers such as GitHub, Google, SAML, CAS, LDAP-backed login, and OIDC federation."
+    reason: "The local Niro-managed runtime has no customer-authorized external IdP tenants, client secrets, certificates, LDAP directory, or callback endpoints. The seeded baseline exercises local password authentication and Casdoor-owned tenant/application authorization only."
+  - gap: "Final delivery and receipt of outbound email or SMS verification, reset, invitation, and MFA messages."
+    reason: "The local runtime is not wired to a real SMTP, SMS, or inbox-capture service with delivery credentials. API/UI configuration surfaces remain in scope, but live third-party message delivery and receipt cannot be proven in this setup."
+  - gap: "Hardware/browser-bound MFA ceremonies including WebAuthn/passkeys and biometric Face ID enrollment or assertion."
+    reason: "The harness runs as local service containers and seeded username/password actors; it has no hardware authenticator, browser profile, biometric device, or trusted ceremony automation for these factors. Related management APIs may still be reachable, but live factor proof is not covered."

@@ -26,3 +26,7 @@
 accepted_behaviors:
   - consequence: "An unauthenticated internet user can confirm whether supplied email addresses have accounts through the public WebFinger endpoint."
     evidence: "authz/authz.go:103 allows public GET /.well-known/webfinger; object/wellknown_oidc_discovery.go:257-264 intentionally handles acct resources by looking up the email and returning user not found when absent."
+  - consequence: "A buyer can mark an order paid without a provider-verified charge when the product uses the built-in dummy payment provider."
+    evidence: "pp/dummy.go:35-38 documents DummyPaymentProvider as a test/mock provider; object/init.go:327-352 creates provider_payment_dummy as a built-in payment provider."
+  - consequence: "An unauthenticated user can confirm whether a supplied username exists in an organization and receive masked recovery contact hints through the password-recovery contact lookup."
+    evidence: "authz/authz.go:48 allows public GET /api/get-email-and-phone; web/src/auth/ForgetPage.js:86-123 intentionally calls it before verification to choose a password-recovery method."
