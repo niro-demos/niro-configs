@@ -281,6 +281,100 @@ class CatalogTests(unittest.TestCase):
             self.assertFalse((config / "findings").exists())
             self.assertFalse((config / "credentials.yaml").exists())
 
+    def test_import_normalizes_trailing_blank_line_at_eof(self) -> None:
+        # An agent Edit that swaps `targets: []` for a real targets list — its
+        # old_string omitting the file's terminating newline, its new_string
+        # ending in one — leaves a blank line at EOF. Written verbatim, that
+        # trips `git diff --check` in the propose step and fails an otherwise
+        # successful run. Import must normalize the trailing newline so the
+        # catalog commit stays clean.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive_path = root / "knowledge.tar"
+            scope = b'targets:\n  - target: "localhost:2283"\n\n'
+            with tarfile.open(archive_path, "w") as archive:
+                for name, content in (
+                    ("niro/niro.yaml", b"version: 1\n"),
+                    ("niro/scope.yaml", scope),
+                    ("niro/harness/start.sh", b"#!/bin/sh\n"),
+                ):
+                    info = tarfile.TarInfo(name)
+                    info.size = len(content)
+                    archive.addfile(info, io.BytesIO(content))
+
+            result = self.run_catalog(
+                root,
+                "import",
+                "--repository",
+                "niro-demos/example",
+                "--niro-dir",
+                "niro",
+                "--archive",
+                str(archive_path),
+                "--upstream",
+                "example/example",
+                "--upstream-sha",
+                "a" * 40,
+                "--niro-version",
+                "v1.2.3",
+                "--source-run",
+                "https://github.com/niro-demos/example/actions/runs/1",
+                "--source-run-conclusion",
+                "success",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            imported = (
+                root / "configs" / "niro-demos" / "example" / "niro" / "scope.yaml"
+            ).read_bytes()
+            self.assertFalse(
+                imported.endswith(b"\n\n"),
+                "trailing blank line at EOF must be normalized away",
+            )
+            self.assertEqual(imported, b'targets:\n  - target: "localhost:2283"\n')
+
+    def test_import_strips_trailing_whitespace_from_lines(self) -> None:
+        # `git diff --check` also rejects trailing whitespace on a line, not
+        # only a blank line at EOF. Normalize both at the import boundary so the
+        # catalog commit is always clean regardless of how the run wrote it.
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            archive_path = root / "knowledge.tar"
+            with tarfile.open(archive_path, "w") as archive:
+                for name, content in (
+                    ("niro/niro.yaml", b"version: 1  \n"),
+                    ("niro/scope.yaml", b"targets: []\n"),
+                    ("niro/harness/start.sh", b"#!/bin/sh\n"),
+                ):
+                    info = tarfile.TarInfo(name)
+                    info.size = len(content)
+                    archive.addfile(info, io.BytesIO(content))
+
+            result = self.run_catalog(
+                root,
+                "import",
+                "--repository",
+                "niro-demos/example",
+                "--niro-dir",
+                "niro",
+                "--archive",
+                str(archive_path),
+                "--upstream",
+                "example/example",
+                "--upstream-sha",
+                "a" * 40,
+                "--niro-version",
+                "v1.2.3",
+                "--source-run",
+                "https://github.com/niro-demos/example/actions/runs/1",
+                "--source-run-conclusion",
+                "success",
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            imported = (
+                root / "configs" / "niro-demos" / "example" / "niro" / "niro.yaml"
+            ).read_bytes()
+            self.assertEqual(imported, b"version: 1\n")
+
     def test_import_replace_replaces_the_complete_niro_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
