@@ -250,6 +250,26 @@ def write_metadata(path: Path, args: argparse.Namespace) -> None:
     )
 
 
+def normalized_config_bytes(data: bytes) -> bytes:
+    """Normalize a UTF-8 text config so a catalog commit always passes
+    `git diff --check`: strip trailing whitespace from every line, drop any
+    blank lines at EOF, and end with exactly one newline. Non-UTF-8 (binary)
+    content is returned unchanged, and content that is already clean is returned
+    unchanged (idempotent). Config files arrive from an agent-authored run whose
+    in-place edits can leave trailing whitespace or a blank line at EOF; imported
+    verbatim those trip the whitespace check in the propose step and fail an
+    otherwise successful run. Normalizing here makes the result independent of
+    exactly how the run wrote the bytes."""
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data
+    body = "\n".join(line.rstrip() for line in text.split("\n")).rstrip("\n")
+    if not body:
+        return data
+    return (body + "\n").encode("utf-8")
+
+
 def import_archive(root: Path, args: argparse.Namespace) -> None:
     checked_repository(args.repository)
     checked_repository(args.upstream)
@@ -295,7 +315,7 @@ def import_archive(root: Path, args: argparse.Namespace) -> None:
                 extracted = archive.extractfile(member)
                 if extracted is None:
                     raise CatalogError(f"could not read archive member: {member.name}")
-                output.write_bytes(extracted.read())
+                output.write_bytes(normalized_config_bytes(extracted.read()))
                 output.chmod(member.mode & 0o755)
 
         staged_metadata = metadata_path(staged_config, args.niro_dir)
