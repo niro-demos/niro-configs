@@ -16,6 +16,10 @@ cat > "${OVERRIDE_FILE}" <<EOF
 services:
   casdoor:
     restart: unless-stopped
+    build:
+      context: ${PROJECT_ROOT}
+      dockerfile: niro/harness/Dockerfile.niro
+      target: STANDARD
     ports: !override
       - "0.0.0.0:${PORT}:8000"
     environment:
