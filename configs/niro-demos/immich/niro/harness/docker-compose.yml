@@ -1,0 +1,77 @@
+# Niro-owned Immich runtime.
+#
+# Builds the server image FROM THE CURRENT CHECKOUT (server/Dockerfile),
+# exactly like e2e/docker-compose.yml does for the project's own e2e suite.
+# Machine learning is intentionally left out (see harness/README.md /
+# accepted-coverage-gaps.yaml) so the harness stays fast and headless.
+#
+# All mutable state (uploaded assets, Postgres data) is bind-mounted under
+# ./run/, which is gitignored (niro/harness/run/).
+name: immich-niro
+
+services:
+  immich-server:
+    container_name: immich_niro_server
+    build:
+      context: ../../
+      dockerfile: server/Dockerfile
+      args:
+        - BUILD_ID=niro
+        - BUILD_IMAGE=niro
+        - BUILD_SOURCE_REF=niro
+        - BUILD_SOURCE_COMMIT=niro
+    environment:
+      DB_HOSTNAME: database
+      DB_USERNAME: postgres
+      DB_PASSWORD: niropostgres1
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: redis
+      IMMICH_MACHINE_LEARNING_ENABLED: 'false'
+      IMMICH_ENV: production
+      IMMICH_LOG_LEVEL: log
+      IMMICH_IGNORE_MOUNT_CHECK_ERRORS: 'true'
+      # Pin explicitly: without this, Immich's auto-detection between
+      # /data and /usr/src/app/upload is ambiguous once both paths exist
+      # in the image, which throws "Inconsistent Media Location" on a
+      # restart after data has been seeded. See docs/src/pages/errors.md.
+      IMMICH_MEDIA_LOCATION: /data
+      TZ: Etc/UTC
+    volumes:
+      - ./run/library:/data
+    ports:
+      - '2283:2283'
+    depends_on:
+      redis:
+        condition: service_started
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      disable: false
+
+  redis:
+    container_name: immich_niro_redis
+    image: docker.io/valkey/valkey:9@sha256:3acc0687f2a2e1091fae6450d7842dd658c941338cf0a873ddd9e14b9e4ea4dd
+    healthcheck:
+      test: redis-cli ping || exit 1
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  database:
+    container_name: immich_niro_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    environment:
+      POSTGRES_PASSWORD: niropostgres1
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - ./run/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d immich']
+      interval: 2s
+      timeout: 5s
+      retries: 60
+      start_period: 10s
