@@ -1,0 +1,32 @@
+# accepted-coverage-gaps.yaml - what cannot be tested in this setup, and why.
+#
+# Every entry is a coverage gap treated as ACCEPTED: as long as an entry exists,
+# the tool will not re-report that gap on every run. To stop accepting one (it
+# became testable - you added the credential, enabled the flag, wired the
+# service), delete it. Version control records who changed what, and when.
+#
+#   gap:     what cannot be exercised here - the specific surface or capability
+#            left untested. (max 1000 runes)
+#   reason:  why it is structurally untestable in THIS setup - prod-only behavior,
+#            external infra/secrets you don't have, a licensed build you can't
+#            produce. Be specific enough that a reviewer can challenge it.
+#
+# Only genuinely unfixable gaps belong here. A gap you could close by adding a
+# fixture, credential, or flag is work to do - not a gap to accept. Broad entries
+# hide real blind spots.
+#
+# This file accumulates across runs and is APPEND-ONLY. Anyone updating it - tool
+# or human - must read it first, keep every existing entry, and only append;
+# never rewrite, reorder, or drop entries. There is no generator for it (it is
+# authored judgment, not derived data), so a clobbered entry is gone for good.
+# COMMIT it to git - that is your history, your review trail, and your undo.
+
+accepted_coverage_gaps:
+  - gap: "Live rate-limiting and brute-force resistance on admin login, password login, and unauthenticated throttled endpoints."
+    reason: "The Niro-managed localhost runtime relaxes ADMIN_RATELIMIT_SECONDS/MAX_BURST, LOGIN_RATELIMIT_SECONDS/MAX_BURST, and UNAUTHENTICATED_RATELIMIT_SECONDS/MAX_BURST in niro/harness/start.sh so one shared 127.0.0.1 test bucket does not create false negatives across actors. The live controls in src/ratelimit.rs are therefore not exercised by the sweep; confirm rate-limit and brute-force behavior separately with production-like settings."
+  - gap: "Outbound email delivery, inbox receipt, and email-dependent account flows."
+    reason: "This local harness intentionally runs without SMTP or a real inbox. Password-reset delivery, verification email delivery, email-based 2FA delivery, and final inbox receipt cannot be exercised here without external mail infrastructure."
+  - gap: "External identity and hardware-backed MFA integrations."
+    reason: "The local harness does not provision OIDC/SAML identity providers, Duo service credentials, YubiKey validation service, push relay credentials, or hardware/WebAuthn authenticators. Those integration paths require external services or devices outside this checkout-local runtime."
+  - gap: "Static Web Vault browser UI bundle."
+    reason: "This checkout does not include the web-vault/ asset bundle required by Vaultwarden's static web UI startup check. The Niro-managed harness sets WEB_VAULT_ENABLED=false in niro/harness/common.sh and serves the current checkout's API and admin surfaces; UI-specific browser behavior is not exercised in this local runtime."

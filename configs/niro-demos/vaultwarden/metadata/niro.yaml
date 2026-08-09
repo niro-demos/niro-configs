@@ -1,0 +1,9 @@
+repository: niro-demos/vaultwarden
+niro_dir: niro
+upstream: dani-garcia/vaultwarden
+upstream_sha: 6f42dee3348fca91a44265b86a1569fb2bfb4fd9
+niro_version: 0.1.72
+installable: true
+validated_at: 2026-08-08
+source_run: https://github.com/niro-demos/vaultwarden/actions/runs/31282417462
+source_run_conclusion: success
