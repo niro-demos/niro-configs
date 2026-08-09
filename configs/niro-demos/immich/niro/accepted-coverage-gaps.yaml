@@ -1,0 +1,38 @@
+# accepted-coverage-gaps.yaml — what cannot be tested in this setup, and why.
+#
+# Every entry is a coverage gap treated as ACCEPTED: as long as an entry exists,
+# the tool will not re-report that gap on every run. To stop accepting one (it
+# became testable — you added the credential, enabled the flag, wired the
+# service), delete it. Version control records who changed what, and when.
+#
+#   gap:     what cannot be exercised here — the specific surface or capability
+#            left untested. (max 1000 runes)
+#   reason:  why it is structurally untestable in THIS setup — prod-only behavior,
+#            external infra/secrets you don't have, a licensed build you can't
+#            produce. Be specific enough that a reviewer can challenge it.
+#
+# Only genuinely unfixable gaps belong here. A gap you could close by adding a
+# fixture, credential, or flag is work to do — not a gap to accept. Broad entries
+# hide real blind spots.
+#
+# This file accumulates across runs and is APPEND-ONLY. Anyone updating it — tool
+# or human — must read it first, keep every existing entry, and only append;
+# never rewrite, reorder, or drop entries. There is no generator for it (it is
+# authored judgment, not derived data), so a clobbered entry is gone for good.
+# COMMIT it to git — that is your history, your review trail, and your undo.
+#
+# Create `accepted-coverage-gaps.yaml` next to this file, carrying this header
+# into it so its rules travel with the data.
+
+accepted_coverage_gaps:
+  - gap: "Machine learning / facial recognition / smart search (CLIP embeddings, face detection, duplicate detection via ML)"
+    reason: "niro/harness/docker-compose.yml runs IMMICH_MACHINE_LEARNING_ENABLED=false and does not start the immich-machine-learning service (same pattern as e2e/docker-compose.yml). The ML microservice needs a downloaded model cache and meaningfully more CPU/RAM/time than a headless CI harness budget allows, and it isn't required to build/run the current checkout's server or web code. Endpoints that only make sense with ML active (person/face management beyond manually inserted rows, smart search ranking, duplicate detection jobs) cannot be exercised end-to-end here."
+
+  - gap: "OAuth / SSO login"
+    reason: "No OAuth provider (Authelia, Keycloak, Authentik, etc.) is wired into this harness; only local username/password accounts are seeded. OAuth-specific code paths (server/src/services/auth.service.ts oauth* methods, /api/oauth/*) cannot be exercised without a real or mocked external IdP."
+
+  - gap: "Outbound email (password reset, notifications)"
+    reason: "No SMTP server is configured in niro/harness/docker-compose.yml, so IMMICH_ENV/system-config email notifications cannot be triggered or captured here."
+
+  - gap: "Storage template / external library filesystem-permission edge cases"
+    reason: "The harness's UPLOAD_LOCATION is a single Docker bind mount (niro/harness/run/library) owned by the container's runtime user; host-side filesystem permission and external-library mount scenarios described in docs/src/pages/administration/library.md are not reproduced."

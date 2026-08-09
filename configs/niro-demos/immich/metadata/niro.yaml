@@ -1,0 +1,9 @@
+repository: niro-demos/immich
+niro_dir: niro
+upstream: niro-demos/immich
+upstream_sha: 7cddcb7531e3b7a9341bd12b7cc6b7b9630ae11f
+niro_version: 0.1.72
+installable: true
+validated_at: 2026-08-09
+source_run: https://github.com/niro-demos/immich/actions/runs/31282263088
+source_run_conclusion: success
