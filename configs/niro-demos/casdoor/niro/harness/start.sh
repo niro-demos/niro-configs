@@ -10,7 +10,8 @@ MYSQL_PORT="${NIRO_MYSQL_PORT:-13306}"
 COMPOSE_PROJECT_NAME="${NIRO_COMPOSE_PROJECT_NAME:-niro_casdoor}"
 OVERRIDE_FILE="${RUN_DIR}/compose.override.yml"
 
-mkdir -p "${RUN_DIR}/mysql"
+mkdir -p "${RUN_DIR}/mysql" "${RUN_DIR}/files"
+chmod 0777 "${RUN_DIR}/files"
 
 cat > "${OVERRIDE_FILE}" <<EOF
 services:
@@ -27,6 +28,8 @@ services:
       dataSourceName: "root:123456@tcp(db:3306)/"
     depends_on:
       - db
+    volumes:
+      - "${RUN_DIR}/files:/files"
   db:
     restart: unless-stopped
     ports: !override

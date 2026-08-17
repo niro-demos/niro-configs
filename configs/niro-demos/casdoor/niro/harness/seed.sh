@@ -78,6 +78,29 @@ seed_user() {
   fi
 }
 
+seed_storage_resource() {
+  local provider="niro-local-storage"
+  local resource_path="/niro-fixtures/beta-alice-cross-org.txt"
+
+  if ! resource_exists "/api/get-provider?id=admin/${provider}"; then
+    api_post "/api/add-provider" "{\"owner\":\"admin\",\"name\":\"${provider}\",\"displayName\":\"Niro Local Storage\",\"category\":\"Storage\",\"type\":\"Local File System\",\"domain\":\"${BASE_URL}\",\"pathPrefix\":\"\"}"
+  fi
+
+  if ! resource_exists "/api/get-resource?id=niro-beta%2F%2Fniro-fixtures%2Fbeta-alice-cross-org.txt"; then
+    local response
+    response="$(printf '%s\n' 'Deterministic Niro resource owned by niro-beta/alice.' | curl -fsS \
+      -b "${COOKIE_JAR}" -c "${COOKIE_JAR}" \
+      -H 'Accept-Language: en' \
+      -X POST "${BASE_URL}/api/upload-resource?owner=niro-beta&user=alice&application=app-niro-beta&provider=${provider}&tag=niro-fixture&fullFilePath=${resource_path}&description=Cross-organization%20resource-listing%20fixture" \
+      -F 'file=@-;filename=beta-alice-cross-org.txt;type=text/plain')"
+    if ! printf '%s' "${response}" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+      echo "Request failed: /api/upload-resource" >&2
+      echo "${response}" >&2
+      exit 1
+    fi
+  fi
+}
+
 seed_tenant "niro-alpha" "Niro Alpha Tenant" "19001"
 seed_tenant "niro-beta" "Niro Beta Tenant" "19002"
 
@@ -87,6 +110,8 @@ seed_user "niro-alpha" "admin" "Niro Alpha Admin" "niro-alpha-admin@example.test
 seed_user "niro-beta" "alice" "Niro Beta Alice" "niro-beta-alice@example.test" "15555550201" 1 false "Niro beta standard user A"
 seed_user "niro-beta" "bob" "Niro Beta Bob" "niro-beta-bob@example.test" "15555550202" 2 false "Niro beta standard user B"
 seed_user "niro-beta" "admin" "Niro Beta Admin" "niro-beta-admin@example.test" "15555550203" 3 true "Niro beta tenant admin"
+
+seed_storage_resource
 
 api_get_ok "/api/get-user?id=built-in/admin"
 api_get_ok "/api/get-user?id=niro-alpha/alice"
@@ -171,6 +196,16 @@ fixtures:
       beta_admin: niro-beta/admin
       beta_alice: niro-beta/alice
       beta_bob: niro-beta/bob
+  - name: beta_alice_resource
+    description: "Deterministic local-storage resource owned by niro-beta/alice. Use its owner, user, and name to test cross-organization resource listing and isolation from niro-alpha actors."
+    value:
+      owner: niro-beta
+      user: alice
+      name: /niro-fixtures/beta-alice-cross-org.txt
+      provider: niro-local-storage
+      application: app-niro-beta
+      tag: niro-fixture
+      file_name: beta-alice-cross-org.txt
 EOF
 
 echo "Seeded Niro actors and generated credentials.yaml / fixtures.yaml"
