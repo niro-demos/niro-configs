@@ -37,6 +37,22 @@ resource_exists() {
   printf '%s' "${response}" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"' && ! printf '%s' "${response}" | grep -Eq '"data"[[:space:]]*:[[:space:]]*null'
 }
 
+restart_casdoor() {
+  local project_root
+  local override_file
+  project_root="$(cd "${NIRO_DIR}/.." && pwd)"
+  override_file="${SCRIPT_DIR}/run/compose.override.yml"
+  (cd "${project_root}" && COMPOSE_PROJECT_NAME="${NIRO_COMPOSE_PROJECT_NAME:-niro_casdoor}" docker compose -f docker-compose.yml -f "${override_file}" restart casdoor)
+  for _ in $(seq 1 60); do
+    if curl -fsS "${BASE_URL}/api/health" >/dev/null; then
+      return
+    fi
+    sleep 2
+  done
+  echo "Casdoor did not become healthy after enabling the webhook worker" >&2
+  exit 1
+}
+
 for _ in $(seq 1 60); do
   if curl -fsS "${BASE_URL}/api/health" >/dev/null; then
     break
@@ -87,6 +103,23 @@ seed_user "niro-alpha" "admin" "Niro Alpha Admin" "niro-alpha-admin@example.test
 seed_user "niro-beta" "alice" "Niro Beta Alice" "niro-beta-alice@example.test" "15555550201" 1 false "Niro beta standard user A"
 seed_user "niro-beta" "bob" "Niro Beta Bob" "niro-beta-bob@example.test" "15555550202" 2 false "Niro beta standard user B"
 seed_user "niro-beta" "admin" "Niro Beta Admin" "niro-beta-admin@example.test" "15555550203" 3 true "Niro beta tenant admin"
+
+if ! resource_exists "/api/get-provider?id=admin/provider-niro-local-storage"; then
+  api_post "/api/add-provider" "{\"owner\":\"admin\",\"name\":\"provider-niro-local-storage\",\"displayName\":\"Niro Local Storage\",\"category\":\"Storage\",\"type\":\"Local File System\",\"domain\":\"${BASE_URL}\",\"pathPrefix\":\"niro\"}"
+fi
+
+if ! resource_exists "/api/get-webhook?id=admin/webhook-niro-success&organization="; then
+  api_post "/api/add-webhook" '{"owner":"admin","name":"webhook-niro-success","organization":"","url":"http://webhook-receiver:19080/success","method":"POST","contentType":"application/json","headers":[{"name":"X-Niro-Harness","value":"success"}],"events":["update-user"],"tokenFields":[],"objectFields":["All"],"isUserExtended":false,"singleOrgOnly":false,"isEnabled":true,"maxRetries":2,"retryInterval":1,"useExponentialBackoff":false}'
+fi
+
+if ! resource_exists "/api/get-webhook?id=admin/webhook-niro-retry&organization="; then
+  api_post "/api/add-webhook" '{"owner":"admin","name":"webhook-niro-retry","organization":"","url":"http://webhook-receiver:19080/always-fail","method":"POST","contentType":"application/json","headers":[{"name":"X-Niro-Harness","value":"retry"}],"events":["update-user"],"tokenFields":[],"objectFields":["All"],"isUserExtended":false,"singleOrgOnly":false,"isEnabled":true,"maxRetries":2,"retryInterval":1,"useExponentialBackoff":false}'
+fi
+
+# The worker starts only when at least one webhook exists at process startup.
+restart_casdoor
+rm -f "${COOKIE_JAR}"
+api_post "/api/login" '{"application":"app-built-in","organization":"built-in","username":"admin","password":"123","signinMethod":"Password","type":"login"}'
 
 api_get_ok "/api/get-user?id=built-in/admin"
 api_get_ok "/api/get-user?id=niro-alpha/alice"
@@ -171,6 +204,22 @@ fixtures:
       beta_admin: niro-beta/admin
       beta_alice: niro-beta/alice
       beta_bob: niro-beta/bob
+  - name: local_storage_provider
+    description: "Filesystem-backed Storage provider for authenticated upload, metadata read, file read, and delete tests. Pass provider=provider-niro-local-storage on resource APIs."
+    value:
+      owner: admin
+      name: provider-niro-local-storage
+      type: Local File System
+      path_prefix: niro
+      public_file_base_url: ${BASE_URL}/files/niro
+  - name: local_webhook_receivers
+    description: "Internal-only webhook fixtures. The success receiver returns 200; the retry receiver always returns 503 so retry state and replay can be exercised through Casdoor's webhook-event APIs. Receiver evidence is persisted in harness/run/webhook/events.jsonl."
+    value:
+      success_webhook: admin/webhook-niro-success
+      retry_webhook: admin/webhook-niro-retry
+      success_url: http://webhook-receiver:19080/success
+      retry_url: http://webhook-receiver:19080/always-fail
+      trigger_event: update-user
 EOF
 
 echo "Seeded Niro actors and generated credentials.yaml / fixtures.yaml"
