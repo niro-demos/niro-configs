@@ -1,0 +1,9 @@
+repository: niro-demos/keycloak
+niro_dir: niro
+upstream: keycloak/keycloak
+upstream_sha: 723ac75dc3fa078f78751a4e8e8de961f2dc737c
+niro_version: 0.1.80
+installable: true
+validated_at: 2026-08-18
+source_run: https://github.com/niro-demos/keycloak/actions/runs/32188298871
+source_run_conclusion: success
