@@ -86,8 +86,13 @@ starting Niro. Fix workflows also provide them to Niro so it can open fix PRs.
 ## What may be stored
 
 The catalog keeps declarative Niro files, acceptance registers, example files,
-and reviewed harness source. Every published entry must be complete and
-installable.
+and reviewed harness source. Every published configuration entry must be
+complete and installable.
+
+Reviewed penetration-test PDFs for public demo targets may be stored under
+`reports/`. Before publishing one, confirm its exact target and run provenance
+and verify that it contains no real customer credentials. Do not store debug
+logs, knowledge archives, runtime state, or reports from non-demo targets.
 
 The importer and validator reject or remove:
 
@@ -201,6 +206,7 @@ configs/<owner>/<repo>/
   metadata/
     <niro-dir>.yaml
   <niro-dir>/
+reports/
 .github/actions/install/
 .github/workflows/ci.yml
 scripts/
