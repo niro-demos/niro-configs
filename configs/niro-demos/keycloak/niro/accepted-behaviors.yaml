@@ -1,0 +1,53 @@
+# accepted-behaviors.yaml — a risk-acceptance register.
+#
+# Every entry is a behavior treated as ACCEPTED: as long as an entry exists, the
+# tool considers that behavior intended and does not re-report it. To stop
+# accepting one, delete it — the finding comes back. Version control records who
+# changed what, and when.
+#
+#   consequence:  [tool] the precise risk, in plain terms a non-expert can
+#                 evaluate — what could actually happen. (max 1000 runes)
+#   evidence:     [tool] proof it looks intentional — comment / test / flag /
+#                 code, by file:line.
+#   reason:       [human] your team's rationale for accepting this — your own
+#                 documentation. The tool never writes it, and an entry is
+#                 accepted by being here, not by this field. But fill it in: an
+#                 undocumented acceptance no one can explain later is how real
+#                 risk quietly gets forgotten.
+#
+# Be specific enough to adjudicate in seconds. Vague entries hide real bugs.
+#
+# This file accumulates across runs and is APPEND-ONLY. Anyone updating it — tool
+# or human — must read it first, keep every existing entry (especially the human
+# `reason`), and only append; never rewrite, reorder, or drop entries. Presence
+# is the suppression signal, so a clobbered entry silently un-accepts a finding.
+# COMMIT it to git — that is your history, your review trail, and your undo.
+#
+# Create `accepted-behaviors.yaml` next to this file, carrying this header into
+# it so its rules travel with the data.
+
+accepted_behaviors:
+  - test_case_id: TC-DC9B5019
+    consequence: "Anyone who obtains an authorization code issued to another user's browser for the public client niro-test-app (via referrer leakage, browser/proxy history, or an open redirect) can redeem it directly for that user's full access, refresh, and ID tokens with no client secret and no proof-of-possession value required, because the client has no PKCE enforcement configured."
+    evidence: "services/src/main/java/org/keycloak/protocol/oidc/grants/AuthorizationCodeGrantType.java:187-192 branches on whether the authorization request carried a code_challenge_method; if not, it deliberately takes the 'PKCE not enforced' path in services/src/main/java/org/keycloak/protocol/oidc/utils/PkceUtils.java:81-99 (checkParamsForPkceNotEnforcedClient), whose code comment cites KEYCLOAK-2604 as the historical decision establishing this as intended, backward-compatible behavior. Whether PKCE is required is a per-client opt-in admin setting (pkce.code.challenge.method / 'Require PKCE' in the Admin Console); its help text in js/apps/admin-ui/maven-resources/theme/keycloak.v2/admin/messages/messages_en.properties:793 states verbatim that public clients 'should always require PKCE' and that otherwise Keycloak only uses PKCE when the authorization request supplies a challenge — documenting this as an admin configuration choice, not a code defect. The test realm's client niro-test-app (niro/harness/seed.sh) was created without setting this attribute, leaving Keycloak's off-by-default state in place."
+    reason: ""
+
+  - test_case_id: TC-3048D392
+    consequence: "Any unauthenticated visitor can enumerate which usernames and which email addresses belong to real accounts in the niro-test realm by iterating candidate values through the public self-registration form and reading the field-specific 'Username already exists.' / 'Email already exists.' error, with no throttling observed — aiding credential-stuffing and phishing target lists."
+    evidence: "services/src/main/java/org/keycloak/authentication/forms/RegistrationUserCreation.java:114-124 maps UserProfile validation failures (Messages.EMAIL_EXISTS / Messages.USERNAME_EXISTS) to field-specific form errors by design. Keycloak's own upstream test suite deliberately asserts these exact field-specific messages as correct, expected product behavior: testsuite/integration-arquillian/tests/base/src/test/java/org/keycloak/testsuite/forms/RegisterTest.java:113 asserts assertEquals(\"Username already exists.\", ...getUsernameError()), with equivalent assertions at :141, :529, :570, :619 for both username and email."
+    reason: ""
+
+  - test_case_id: TC-D2AF5C73
+    consequence: "Any unauthenticated visitor can self-register a fully functional account in the niro-test realm using a one-character password, because the realm has no password policy configured; any legitimate user who reuses or picks a weak password has no server-side floor on password strength."
+    evidence: "server-spi/src/main/java/org/keycloak/models/PasswordPolicy.java:59-61 defines PasswordPolicy.empty() as the explicit, first-class representation of 'no policy configured,' and its Builder(String policyString) (~175-196) maps a null/blank realm passwordPolicy string to that same empty state with no hidden fallback to a non-empty default. server-spi-private/src/main/java/org/keycloak/policy/DefaultPasswordPolicyManagerProvider.java:39-48,65-78 builds its active policy-check list purely from realm.getPasswordPolicy().getPolicies(); with an empty policy the loop runs zero times and validate() returns null (no error) for any password — normal control flow implementing password policy as opt-in. Across the repo's realm-import JSON fixtures, only a handful set a passwordPolicy at all, confirming an absent policy is the norm for any realm that hasn't had one explicitly configured. The niro-test realm (niro/harness/seed.sh) never sets passwordPolicy, leaving Keycloak's off-by-default state in place."
+    reason: ""
+
+  - test_case_id: TC-12316A17
+    consequence: "Any authenticated end user can determine whether an arbitrary username or email address belongs to an existing account in the realm, by submitting it as their own profile-update value and observing a 409 with usernameExistsMessage/emailExistsMessage (vs. a 204 success when it does not collide). This gives an enumeration oracle over the realm's user directory, with no throttling on the endpoint, useful for targeting credential-stuffing or phishing."
+    evidence: "services/src/main/java/org/keycloak/services/resources/account/AccountRestService.java:170-175 (updateAccount() surfaces UserProfileProvider's ValidationException, including USERNAME_EXISTS/EMAIL_EXISTS errors, as a 409 with the specific field/message) backed by validators services/src/main/java/org/keycloak/userprofile/validator/DuplicateUsernameValidator.java and DuplicateEmailValidator.java that intentionally raise these errors on any collision. The product's own test suite asserts this exact response as correct: tests/base/src/test/java/org/keycloak/tests/account/AccountRestServiceTest.java:390 and :397 call updateError(user, 409, Messages.EMAIL_EXISTS, token) / updateError(user, 409, Messages.USERNAME_EXISTS, token) for a self-service account update to a taken email/username. The same duplicate-check pattern (and message) is also deliberately used, and equally observable, on the unauthenticated self-registration form (RegistrationUsernameExistsValidator, EmailExistsAsUsernameValidator) — self-service forms across the product intentionally tell the user 'that username/email is taken' so they can correct their submission."
+    reason: ""
+
+  - test_case_id: TC-6ABED077
+    consequence: "With account lockout confirmed disabled realm-wide (bruteForceProtected: false), an attacker holding a target username can run unlimited password-guessing or credential-stuffing against any account via the direct-grant token endpoint and the browser login form, with no delay, CAPTCHA, or lockout."
+    evidence: "services/src/main/java/org/keycloak/services/managers/RealmManager.java:273 (setupRealmDefaults()) explicitly does realm.setBruteForceProtected(false) for every newly created realm. docs/documentation/server_admin/topics/threat/brute-force.adoc:14-19 carries an official WARNING stating verbatim that 'Brute force detection is disabled by default. Enable this feature to protect against brute force attacks,' with enablement steps under Realm Settings -> Security Defenses -> Brute Force Detection. Keycloak's own test suite (BruteForceTest, AttackDetectionResourceTest, test-framework/.../RealmBuilder.java:406-407) only exercises the protection after explicitly turning it on, confirming off-by-default is the expected baseline. The niro-test realm (niro/harness/seed.sh) never sets bruteForceProtected, leaving Keycloak's shipped default in place."
+    reason: ""
