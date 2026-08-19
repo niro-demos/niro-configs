@@ -89,10 +89,10 @@ The catalog keeps declarative Niro files, acceptance registers, example files,
 and reviewed harness source. Every published configuration entry must be
 complete and installable.
 
-Sanitized public demo summaries may be stored under `reports/`. They contain
-only aggregate outcomes and links to public GitHub evidence. Never copy a
-generated penetration-test report, individual finding evidence, test data, or
-other run artifacts into this repository.
+Reviewed penetration-test PDFs for public demo targets may be stored under
+`reports/`. Before publishing one, confirm its exact target and run provenance
+and verify that it contains no real customer credentials. Do not store debug
+logs, knowledge archives, runtime state, or reports from non-demo targets.
 
 The importer and validator reject or remove:
 
